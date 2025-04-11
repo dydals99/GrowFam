@@ -1,0 +1,61 @@
+from typing import Optional, List
+from pydantic import BaseModel
+from datetime import datetime
+
+class CommunityCreate(BaseModel):
+    community_no: Optional[int] = None
+    community_title: str
+    community_content: str
+    user_no: int
+    community_created_at: Optional[datetime] = None
+    like_count: Optional[int] = 0
+
+class CommunityUpdate(BaseModel):
+    community_title: Optional[str] = None
+    community_content: Optional[str] = None
+
+class CommunityOut(BaseModel):
+    community_no: int
+    community_title: str
+    community_content: str
+    user_no: int
+    community_created_at: datetime
+    like_count: int
+    
+    class Config:
+        orm_mode = True
+
+class CommunityLikeCreate(BaseModel):
+    community_no: int
+    user_no: int
+
+class CommunityLikeOut(BaseModel):
+    id: int
+    community_no: int
+    user_no: int
+
+    class Config:
+        orm_mode = True
+
+class ScheduleCreate(BaseModel):
+    famliy_no: int
+    schedule_cotents: str
+    schedule_date: datetime
+    schedule_check_count: int
+
+# 일정 조회 시 사용하는 스키마
+class ScheduleRead(BaseModel):
+    schedule_no: int
+    schedule_cotents: str
+    schedule_date: datetime
+    schedule_check_count: int
+
+    class Config:
+        orm_mode = True
+
+class ScheduleCheckRead(BaseModel):
+    schedule_no: int
+    schedule_check_count: int
+
+    class Config:
+        orm_mode = True

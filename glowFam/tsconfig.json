@@ -1,0 +1,21 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "baseUrl": ".",                    // 프로젝트 루트로 설정
+    "paths": {
+      "@/*": ["./*"]                  // '@/' 별칭이 프로젝트 루트의 모든 파일을 참조하도록 설정
+    }
+    
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+    
+  ]
+}
