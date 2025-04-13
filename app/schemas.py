@@ -59,3 +59,22 @@ class ScheduleCheckRead(BaseModel):
 
     class Config:
         orm_mode = True
+
+class CommunityCommentBase(BaseModel):
+    coment_content: str
+    community_no: int
+    user_no: int
+
+class CommunityCommentCreate(CommunityCommentBase):
+    pass
+
+class CommunityCommentUpdate(BaseModel):
+    coment_content: Optional[str] = None
+
+class CommunityCommentOut(CommunityCommentBase):
+    coment_no: int
+    coment_at: datetime  # 필드 이름을 DB와 일치하도록 수정
+    user_nickname: str  # 사용자 닉네임 추가
+
+    class Config:
+        orm_mode = True

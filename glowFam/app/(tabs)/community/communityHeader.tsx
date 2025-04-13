@@ -11,7 +11,6 @@ type CommunityHeaderProps = {
 export default function CommunityHeader({
   searchText,
   setSearchText,
-  searchFocused,
   setSearchFocused,
 }: CommunityHeaderProps) {
   return (

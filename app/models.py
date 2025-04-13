@@ -26,6 +26,7 @@ class User(Base):
     __tablename__ = "tb_users"
     user_no = Column(Integer, primary_key=True, index=True)
     user_name = Column(String(20))
+    user_nickname = Column(String(20), nullable=False, unique=True)
     user_email = Column(String(255), nullable=False)
     hashed_pw = Column(String(100), nullable=False)
     user_role = Column(String(20), default="member")
@@ -49,6 +50,15 @@ class CommunityLike(Base):
     community_no = Column(Integer, ForeignKey("tb_community.community_no"))
     user_no = Column(Integer, ForeignKey("tb_users.user_no"))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class CommunityComment(Base):
+    __tablename__ = "tb_community_coment"
+
+    coment_no = Column(Integer, primary_key=True, index=True)
+    coment_content = Column(Text, nullable=False)
+    coment_at = Column(DateTime, server_default=func.now(), nullable=False)
+    community_no = Column(Integer, ForeignKey("tb_community.community_no", ondelete="CASCADE"), nullable=False)
+    user_no = Column(Integer, ForeignKey("tb_users.user_no", ondelete="CASCADE"), nullable=False)
 
 class Family(Base):
     __tablename__ = "tb_famliy"
@@ -74,6 +84,6 @@ class Schedule(Base):
 
 class ScheduleCheck(Base):
     __tablename__ = "tb_schedule_check"
-    schedule_no = Column(Integer, ForeignKey("tb_schedule.schedule_no"), primary_key=True)
+    schedule_no = Column(Integer, ForeignKey("tb_schedule.schedule.no"), primary_key=True)
     schedule_check_count = Column(Integer, default=0)
     schedule_check_date = Column(DateTime, nullable=True)  # 마지막 체크 날짜 추가

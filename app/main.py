@@ -8,11 +8,13 @@ from app.routers.community_like import router as community_like
 from app.routers.community import router as community
 from app.routers.schedule import router as schedule
 from app.routers.graph import router as graph_router
+from app.routers.community_coment import router as community_coment_router
 import os
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="GrowFarm Community API")
+app.router.redirect_slashes = False
 
 UPLOAD_DIR = os.path.join(os.getcwd(), "uploaded_photos")
 
@@ -33,6 +35,7 @@ app.include_router(community)
 app.include_router(community_like)
 app.include_router(schedule)
 app.include_router(graph_router)
+app.include_router(community_coment_router)
 app.mount("/static", StaticFiles(directory=UPLOAD_DIR), name="static")
 
 

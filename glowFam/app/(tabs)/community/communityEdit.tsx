@@ -8,12 +8,10 @@ export default function CommunityEdit() {
   const params = useLocalSearchParams<{ post?: string }>();
   const post = params.post ? JSON.parse(params.post) : null;
 
-  // 기존 데이터로 초기값 설정
   const [title, setTitle] = useState(post ? post.community_title : '');
   const [content, setContent] = useState(post ? post.community_content : '');
 
   const handleCancel = () => {
-    // 취소 시 목록 페이지로 이동합니다.
     router.push('./community');
   };
 

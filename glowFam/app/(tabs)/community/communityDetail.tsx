@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TouchableWithoutFeedback, Keyboard, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import CommunityCommentModal from './communityComment';
+import CommunityCommentModal from './communityComent';
 import { API_URL } from '../../../constants/config';
 import dayjs from 'dayjs';
 
@@ -25,6 +25,15 @@ export default function CommunityDetail() {
   const [hasLiked, setHasLiked] = useState<boolean>(false);
   const [showMoreMenu, setShowMoreMenu] = useState<boolean>(false);
   const [commentCount, setCommentCount] = useState<number>(0);
+  type Coment = {
+    id: number;
+    text: string;
+    user_nickname: string;
+    coment_at: string;
+  };
+  
+  const [coments, setComments] = useState<Coment[]>([]);
+  const [loadingComments, setLoadingComments] = useState<boolean>(false);
 
   const post: Post | undefined = params.post ? JSON.parse(params.post) : undefined;
 
@@ -34,6 +43,12 @@ export default function CommunityDetail() {
       // 댓글 수도 서버에서 받아오려면 setCommentCount(...)
     }
   }, [post]);
+
+  useEffect(() => {
+    if (!post) {
+      console.error('post 데이터가 전달되지 않았습니다. params:', params);
+    }
+  }, [params]);
 
   // 좋아요 상태 및 숫자 가져오기
   const fetchLikeStatus = async () => {
@@ -111,6 +126,39 @@ export default function CommunityDetail() {
     router.push('./community');
   };
 
+  const fetchComments = async () => {
+    if (!post) return;
+    setLoadingComments(true);
+    try {
+      const res = await fetch(`${API_URL}/comments/list?community_no=${post.community_no}`);
+      if (res.ok) {
+        const data = await res.json();
+        const formattedComments = data.map((comment: any) => ({
+          id: comment.coment_no,
+          text: comment.coment_content,
+          user_nickname: comment.user_nickname,
+          coment_at: comment.coment_at,
+          user_id: comment.user_no,
+        }));
+        setComments(formattedComments);
+      } else {
+        console.error('댓글 불러오기 실패:', res.status);
+        setComments([]);
+      }
+    } catch (error) {
+      console.error('댓글 요청 에러:', error);
+      setComments([]);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  useEffect(() => {
+    if (modalVisible) {
+      fetchComments();
+    }
+  }, [modalVisible]);
+
   if (!post) {
     return (
       <View style={styles.container}>
@@ -174,20 +222,14 @@ export default function CommunityDetail() {
                 {hasLiked ? "❤️" : "🤍"} {likeCount}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.iconButton, { marginLeft: 25 }]} onPress={() => setModalVisible(true)}>
+            <TouchableOpacity
+              style={[styles.iconButton, { marginLeft: 25 }]}
+              onPress={() => router.push(`/community/communityComent?communityNo=${post.community_no}&userNo=${mockUser.user_no}`)}
+            >
               <Text style={styles.iconText}>💬 {commentCount}</Text>
             </TouchableOpacity>
           </View>
-        </View>
-
-        <CommunityCommentModal
-          visible={modalVisible}
-          onClose={() => setModalVisible(false)}
-          comments={[
-            { id: 1, text: "댓글 내용 1" },
-            { id: 2, text: "댓글 내용 2" },
-          ]}
-        />
+        </View>  
       </View>
     </TouchableWithoutFeedback>
   );
