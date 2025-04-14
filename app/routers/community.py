@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List
 from app import schemas, models, database
@@ -54,6 +55,7 @@ def update_community(
         raise HTTPException(status_code=404, detail="Community not found")
     for k, v in community_in.dict(exclude_unset=True).items():
         setattr(comm, k, v)
+    comm.community_regist_at = func.now()  # 수정된 작성일 업데이트
     db.commit()
     db.refresh(comm)
     return comm

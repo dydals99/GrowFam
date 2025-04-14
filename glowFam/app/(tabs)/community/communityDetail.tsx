@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TouchableWithoutFeedback, Keyboard, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import CommunityCommentModal from './communityComent';
 import { API_URL } from '../../../constants/config';
 import dayjs from 'dayjs';
 
@@ -10,7 +9,7 @@ type Post = {
   community_title: string;
   community_content: string;
   user_no: number;
-  community_created_at: string;
+  community_regist_at: string;
 };
 
 const mockUser = {
@@ -24,23 +23,23 @@ export default function CommunityDetail() {
   const [likeCount, setLikeCount] = useState<number>(0);
   const [hasLiked, setHasLiked] = useState<boolean>(false);
   const [showMoreMenu, setShowMoreMenu] = useState<boolean>(false);
-  const [comentCount, setComentCount] = useState<number>(0);
+  const [comentCounts, setComentCounts] = useState<number>(0);
   type Coment = {
-    id: number;
-    text: string;
+    coment_no: number;
+    coment_content: string;
     user_nickname: string;
-    coment_at: string;
+    coment_regist_at: string;
   };
   
   const [coments, setComents] = useState<Coment[]>([]);
-  const [loadingComments, setLoadingComents] = useState<boolean>(false);
+  const [loadingComents, setLoadingComents] = useState<boolean>(false);
 
   const post: Post | undefined = params.post ? JSON.parse(params.post) : undefined;
 
   useEffect(() => {
     if (post) {
       fetchLikeStatus();
-      // 댓글 수도 서버에서 받아오려면 setCommentCount(...)
+      fetchComentCount();
     }
   }, [post]);
 
@@ -64,6 +63,26 @@ export default function CommunityDetail() {
     }
   };
 
+  const fetchComentCount = async () => {
+    if (!post) return;
+    try {
+      const res = await fetch(`${API_URL}/coments/counts?community_no=${post.community_no}`);
+      if (!res.ok) {
+        throw new Error('잘못된 요청');
+      }
+      const data = await res.json();
+      //console.log('Fetched coment count:', data);
+      if (data && data.counts) {
+        const count = data.counts[post.community_no] || 0; // 댓글이 없으면 0으로 설정
+        setComentCounts(count);
+      } else {
+        console.error('예상 못한 API 응답:', data);
+      }
+    } catch (error) {
+      console.error('fetching 에러 :', error);
+    }
+  };
+
   // 좋아요 토글
   const toggleLike = async () => {
     try {
@@ -84,13 +103,26 @@ export default function CommunityDetail() {
     }
   };
 
-  const handleEdit = () => {
-    setShowMoreMenu(false);
-    router.push({
-    pathname: '/community/communityEdit',
-    params: { post: JSON.stringify(post) },
-    });
+  const handleEdit = async () => {
+    try {
+      if (!post) {
+        throw new Error('Post data is undefined');
+      }
+      const response = await fetch(`${API_URL}/communities/${post.community_no}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch community details');
+      }
+      const communityData = await response.json();
+      router.push({
+        pathname: '/community/communityEdit',
+        params: { post: JSON.stringify(communityData) },
+      });
+    } catch (error) {
+      console.error('Error fetching community details:', error);
+      Alert.alert('오류', '수정할 데이터를 불러오는데 실패했습니다.');
+    }
   };
+
   // 삭제하기
   const handleDelete = async () => {
     setShowMoreMenu(false);
@@ -129,17 +161,17 @@ export default function CommunityDetail() {
     if (!post) return;
     setLoadingComents(true);
     try {
-      const res = await fetch(`${API_URL}/comments/list?community_no=${post.community_no}`);
+      const res = await fetch(`${API_URL}/coments/list?community_no=${post.community_no}`);
       if (res.ok) {
         const data = await res.json();
-        const formattedComments = data.map((comment: any) => ({
-          id: comment.coment_no,
-          text: comment.coment_content,
-          user_nickname: comment.user_nickname,
-          coment_at: comment.coment_at,
-          user_id: comment.user_no,
+        const formattedComents = data.map((coment: any) => ({
+          id: coment.coment_no,
+          text: coment.coment_content,
+          user_nickname: coment.user_nickname,
+          coment_at: coment.coment_at,
+          user_id: coment.user_no,
         }));
-        setComents(formattedComments);
+        setComents(formattedComents);
       } else {
         console.error('댓글 불러오기 실패:', res.status);
         setComents([]);
@@ -197,8 +229,8 @@ export default function CommunityDetail() {
           <Text style={styles.author}>작성자 : {post.user_no}</Text>
           <Text style={styles.date}>
             작성일 :{" "}
-            {post.community_created_at || dayjs(post.community_created_at).isValid()
-              ? dayjs(post.community_created_at).format("YYYY.MM.DD HH:mm")
+            {post.community_regist_at || dayjs(post.community_regist_at).isValid()
+              ? dayjs(post.community_regist_at).format("YYYY.MM.DD HH:mm")
               : "날짜 정보 없음"}
           </Text>
           <TextInput
@@ -225,7 +257,7 @@ export default function CommunityDetail() {
               style={[styles.iconButton, { marginLeft: 25 }]}
               onPress={() => router.push(`/community/communityComent?communityNo=${post.community_no}&userNo=${mockUser.user_no}`)}
             >
-              <Text style={styles.iconText}>💬 {comentCount}</Text>
+              <Text style={styles.iconText}>💬 {comentCounts || 0}</Text>
             </TouchableOpacity>
           </View>
         </View>  

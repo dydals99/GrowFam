@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app import models, schemas
 from app.database import get_db
 from typing import List
@@ -10,8 +11,8 @@ router = APIRouter(
 )
 
 @router.post("/add", response_model=schemas.CommunityComentOut)
-def create_comment(comment: schemas.CommunityComentCreate, db: Session = Depends(get_db)):
-    db_coment = models.CommunityComent(**comment.dict())
+def create_coment(coment: schemas.CommunityComentCreate, db: Session = Depends(get_db)):
+    db_coment = models.CommunityComent(**coment.dict())
     db.add(db_coment)
     db.commit()
     db.refresh(db_coment)
@@ -28,14 +29,14 @@ def create_comment(comment: schemas.CommunityComentCreate, db: Session = Depends
     return {
         "coment_no": db_coment.coment_no,
         "coment_content": db_coment.coment_content,
-        "coment_at": db_coment.coment_at,
+        "coment_regist_at": db_coment.coment_regist_at,
         "community_no": db_coment.community_no,
         "user_no": db_coment.user_no,
         "user_nickname": user_nickname,
     }
 
 @router.delete("/{coment_no}")
-def delete_comment(coment_no: int, db: Session = Depends(get_db)):
+def delete_coment(coment_no: int, db: Session = Depends(get_db)):
     db_coment = db.query(models.CommunityComent).filter(models.CommunityComent.coment_no == coment_no).first()
     if not db_coment:
         raise HTTPException(status_code=404, detail="댓글을 찾을 수 없음.")
@@ -44,12 +45,12 @@ def delete_comment(coment_no: int, db: Session = Depends(get_db)):
     return {"삭제 되었습니다."}
 
 @router.get("/list", response_model=List[schemas.CommunityComentOut])
-def get_comments(community_no: int, db: Session = Depends(get_db)):
-    comments = (
+def get_coments(community_no: int, db: Session = Depends(get_db)):
+    coments = (
         db.query(
             models.CommunityComent.coment_no,
             models.CommunityComent.coment_content,
-            models.CommunityComent.coment_at,
+            models.CommunityComent.coment_regist_at,
             models.CommunityComent.community_no,
             models.CommunityComent.user_no,
             models.User.user_nickname
@@ -59,20 +60,20 @@ def get_comments(community_no: int, db: Session = Depends(get_db)):
         .all()
     )
 
-    print("Fetched coments:", comments)
+    print("Fetched coments:", coments)
 
-    return comments
+    return coments
 
 @router.get("/", response_model=List[schemas.CommunityComentOut])
-def get_comments_root(community_no: int, db: Session = Depends(get_db)):
-    return get_comments(community_no, db)
+def get_coments_root(community_no: int, db: Session = Depends(get_db)):
+    return get_coments(community_no, db)
 
 @router.put("/{coment_no}", response_model=schemas.CommunityComentOut)
 def update_coment(coment_no: int, coment: schemas.CommunityComentUpdate, db: Session = Depends(get_db)):
-    print(f"Received comment_no: {coment_no}")
+    print(f"Received coment_no: {coment_no}")
     db_coment = db.query(models.CommunityComent).filter(models.CommunityComent.coment_no == coment_no).first()
     if not db_coment:
-        raise HTTPException(status_code=404, detail="Comment not found")
+        raise HTTPException(status_code=404, detail="Coment not found")
     for key, value in coment.dict(exclude_unset=True).items():
         setattr(db_coment, key, value)
     db.commit()
@@ -90,8 +91,17 @@ def update_coment(coment_no: int, coment: schemas.CommunityComentUpdate, db: Ses
     return {
         "coment_no": db_coment.coment_no,
         "coment_content": db_coment.coment_content,
-        "coment_at": db_coment.coment_at,
+        "coment_at": db_coment.coment_regist_at,
         "community_no": db_coment.community_no,
         "user_no": db_coment.user_no,
         "user_nickname": user_nickname,
     }
+
+@router.get("/counts", response_model=dict)
+def get_all_coment_counts(db: Session = Depends(get_db)):
+    counts = (
+        db.query(models.CommunityComent.community_no, func.count(models.CommunityComent.coment_no).label("count"))
+        .group_by(models.CommunityComent.community_no)
+        .all()
+    )
+    return {"counts": {row.community_no: row.count for row in counts}}

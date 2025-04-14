@@ -65,7 +65,7 @@ const CommunityComent = () => {
     <View style={styles.comentContainer}>
       <Text style={styles.comentTitle}>{item.coment_content}</Text>
       <Text style={styles.comentAuthor}>작성자: {item.user_nickname}</Text>
-      <Text style={styles.comentDate}>등록일자: {new Date(item.coment_at).toLocaleString()}</Text>
+      <Text style={styles.comentDate}>등록일자: {new Date(item.coment_regist_at).toLocaleString()}</Text>
       {item.user_no === Number(userNo) && (
         <View style={styles.actionButtonsContainer}>
           <TouchableOpacity

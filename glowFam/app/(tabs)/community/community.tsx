@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { SafeAreaView, View, Text, StyleSheet, TouchableOpacity, FlatList, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -10,8 +10,9 @@ interface Post {
   community_title: string;
   community_content: string;
   user_no: number;
-  community_created_at: string;
+  community_regist_at: string;
   like_count : number;
+
 }
 
 export default function Community() {
@@ -21,6 +22,7 @@ export default function Community() {
   const [searchText, setSearchText] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [currentTab, setCurrentTab] = useState<'all' | 'popular'>('all');
+  const [comentCounts, setComentCounts] = useState<{ [key: number]: number }>({});
 
   // 화면이 포커스될 때마다 fetch
   useFocusEffect(
@@ -69,6 +71,22 @@ export default function Community() {
     }
   };
 
+  const fetchComentCounts = async () => {
+    try {
+      const res = await fetch(`${API_URL}/coments/counts`);
+      if (!res.ok) {
+        throw new Error('Failed to fetch coment counts');
+      }
+      const data = await res.json();
+      setComentCounts(data.counts);
+    } catch (error) {
+      console.error('Error fetching coment counts:', error);    }
+  };
+
+  useEffect(() => {
+    fetchComentCounts();
+  }, []);
+
   // 탭 버튼 누르면 상태 변경
   const handleTabPress = (tab: 'all' | 'popular') => {
     setCurrentTab(tab);
@@ -81,7 +99,6 @@ export default function Community() {
         router.push({
           pathname: '/community/communityDetail',
           params: { post: JSON.stringify(item) },
-          
         });
       }}
     >
@@ -90,7 +107,7 @@ export default function Community() {
         <Text style={styles.postAuthor}>작성자 : {item.user_no}</Text>
       </View>
       <View style={styles.summaryBox}>
-        <Text style={styles.summaryText}>❤️ {item.like_count}   |   💬</Text>
+        <Text style={styles.summaryText}>❤️ {item.like_count}   |   💬 {comentCounts[item.community_no] || 0}</Text>
       </View>
     </TouchableOpacity>
   );

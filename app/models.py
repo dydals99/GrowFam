@@ -41,7 +41,7 @@ class Community(Base):
     community_content = Column(Text, nullable=False)
     user_no = Column(Integer, ForeignKey("tb_users.user_no"), nullable=False)
     like_count = Column(Integer, default=0)
-    community_created_at = Column(DateTime(timezone=True), server_default=func.now())
+    community_regist_at = Column(DateTime(timezone=True), server_default=func.now())
     owner = relationship("User", back_populates="communities")
 
 class CommunityLike(Base):
@@ -49,14 +49,14 @@ class CommunityLike(Base):
     like_id = Column(Integer, primary_key=True, index=True)
     community_no = Column(Integer, ForeignKey("tb_community.community_no"))
     user_no = Column(Integer, ForeignKey("tb_users.user_no"))
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    like_regist_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class CommunityComent(Base):
     __tablename__ = "tb_community_coment"
 
     coment_no = Column(Integer, primary_key=True, index=True)
     coment_content = Column(Text, nullable=False)
-    coment_at = Column(DateTime, server_default=func.now(), nullable=False)
+    coment_regist_at = Column(DateTime, server_default=func.now(), nullable=False)
     community_no = Column(Integer, ForeignKey("tb_community.community_no", ondelete="CASCADE"), nullable=False)
     user_no = Column(Integer, ForeignKey("tb_users.user_no", ondelete="CASCADE"), nullable=False)
 
@@ -65,7 +65,7 @@ class Family(Base):
     famliy_no = Column(Integer, primary_key=True, index=True)
     user_no = Column(Integer, ForeignKey("tb_users.user_no"), nullable=False)
     famliy_nickname = Column(String(20))
-    famliy_created_at = Column(DateTime, server_default=func.now())
+    famliy_regist_at = Column(DateTime, server_default=func.now())
     
 class FamilyMonthGoal(Base):
     __tablename__ = "tb_famliy_month_golas"
@@ -84,6 +84,6 @@ class Schedule(Base):
 
 class ScheduleCheck(Base):
     __tablename__ = "tb_schedule_check"
-    schedule_no = Column(Integer, ForeignKey("tb_schedule.schedule.no"), primary_key=True)
+    schedule_no = Column(Integer, ForeignKey("tb_schedule.schedule_no"), primary_key=True)
     schedule_check_count = Column(Integer, default=0)
     schedule_check_date = Column(DateTime, nullable=True)  # 마지막 체크 날짜 추가

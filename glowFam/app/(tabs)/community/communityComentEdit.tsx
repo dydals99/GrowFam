@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { API_URL } from '../../../constants/config';
@@ -14,6 +14,12 @@ const CommunityComentEdit = () => {
   }>();
 
   const [updatedComent, setUpdatedComent] = useState(coment_content || '');
+
+  useEffect(() => {
+    if (coment_content) {
+      setUpdatedComent(coment_content);
+    }
+  }, [coment_content]);
 
   const handleUpdateComent = async () => {
     if (!updatedComent.trim()) {

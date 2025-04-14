@@ -7,7 +7,7 @@ class CommunityCreate(BaseModel):
     community_title: str
     community_content: str
     user_no: int
-    community_created_at: Optional[datetime] = None
+    community_regist_at: Optional[datetime] = None
     like_count: Optional[int] = 0
 
 class CommunityUpdate(BaseModel):
@@ -19,7 +19,7 @@ class CommunityOut(BaseModel):
     community_title: str
     community_content: str
     user_no: int
-    community_created_at: datetime
+    community_regist_at: datetime
     like_count: int
     
     class Config:
@@ -73,7 +73,7 @@ class CommunityComentUpdate(BaseModel):
 
 class CommunityComentOut(CommunityComentBase):
     coment_no: int
-    coment_at: datetime  # 필드 이름을 DB와 일치하도록 수정
+    coment_regist_at: datetime  # 필드 이름을 DB와 일치하도록 수정
     user_nickname: str  # 사용자 닉네임 추가
 
     class Config:

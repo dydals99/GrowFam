@@ -12,7 +12,7 @@ export default function CommunityEdit() {
   const [content, setContent] = useState(post ? post.community_content : '');
 
   const handleCancel = () => {
-    router.push('./community');
+    router.push('./communityDetail');
   };
 
   const handleSubmit = async () => {
@@ -24,7 +24,7 @@ export default function CommunityEdit() {
     const postData = {
       community_title: title,
       community_content: content,
-      // 필요한 경우 user_no 등 다른 필드도 추가할 수 있습니다.
+      community_regist_at: new Date().toISOString(), // 수정된 작성일 추가
     };
 
     try {
@@ -55,8 +55,6 @@ export default function CommunityEdit() {
       Alert.alert('오류', '네트워크 오류가 발생했습니다.');
     }
   };
-
-  // 만약 post 데이터가 없다면 에러 메시지 출력
   if (!post) {
     return (
       <View style={styles.container}>
