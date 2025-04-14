@@ -13,35 +13,35 @@ const CommunityComentEdit = () => {
     community_no: string;
   }>();
 
-  const [updatedComment, setUpdatedComment] = useState(coment_content || '');
+  const [updatedComent, setUpdatedComent] = useState(coment_content || '');
 
-  const handleUpdateComment = async () => {
-    if (!updatedComment.trim()) {
+  const handleUpdateComent = async () => {
+    if (!updatedComent.trim()) {
       Alert.alert('오류', '댓글 내용을 입력하세요.');
       return;
     }
 
     try {
-      const res = await fetch(`${API_URL}/comments/${coment_no}`, {
+      const res = await fetch(`${API_URL}/coments/${coment_no}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          coment_content: updatedComment,
-          coment_at: new Date().toISOString(), // 수정일 업데이트
+          coment_content: updatedComent,
+          coment_at: new Date().toISOString(),
         }),
       });
 
       if (res.ok) {
-        const updatedData = await res.json(); // 수정된 데이터 가져오기
+        const updatedData = await res.json(); 
         Alert.alert('성공', '댓글이 수정되었습니다.', [
           {
             text: '확인',
             onPress: () =>
               router.push({
                 pathname: './communityComent',
-                params: { communityNo: community_no, userNo: user_no }, // communityNo와 userNo 전달
+                params: { communityNo: community_no, userNo: user_no }, 
               }),
           },
         ]);
@@ -61,19 +61,21 @@ const CommunityComentEdit = () => {
       <Text style={styles.label}>작성자: {user_nickname}</Text>
       <TextInput
         style={styles.input}
-        value={updatedComment}
-        onChangeText={setUpdatedComment}
+        value={updatedComent}
+        onChangeText={setUpdatedComent}
         placeholder="댓글 내용을 입력하세요..."
         multiline
       />
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={handleUpdateComment}>
+        <TouchableOpacity style={styles.button} onPress={handleUpdateComent}>
           <Text style={styles.buttonText}>수정</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.button, styles.cancelButton]}
           onPress={() =>
-            router.push({ pathname: './communityComent', params: { communityNo: community_no, userNo: user_no } }) // 취소 시 communityNo와 userNo 전달
+            router.push({ 
+              pathname: './communityComent', 
+              params: { communityNo: community_no, userNo: user_no } })
           }
         >
           <Text style={styles.buttonText}>취소</Text>

@@ -1,20 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput, Button, StyleSheet, Alert, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, TextInput, Button, StyleSheet, Alert, Platform, KeyboardAvoidingView, BackHandler } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { API_URL } from '../../../constants/config';
 
 const CommunityComent = () => {
   const router = useRouter();
-  const { communityNo, userNo, post } = useLocalSearchParams<{ communityNo: string; userNo: string; post: string }>();
-  const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState('');
+  const { communityNo, userNo } = useLocalSearchParams<{ communityNo: string; userNo: string; post: string }>();
+  const [coments, setComents] = useState([]);
+  const [newComent, setNewComent] = useState('');
 
-  const fetchComments = async () => {
+  const fetchComents = async () => {
     try {
-      const res = await fetch(`${API_URL}/comments/list?community_no=${communityNo}`);
+      const res = await fetch(`${API_URL}/coments/list?community_no=${communityNo}`);
       if (res.ok) {
         const data = await res.json();
-        setComments(data);
+        setComents(data);
       } else {
         console.error('댓글 목록 로드 실패:', res.status);
         Alert.alert('오류', '댓글 목록을 불러오는 데 실패했습니다.');
@@ -25,20 +25,20 @@ const CommunityComent = () => {
     }
   };
 
-  const handleAddComment = async () => {
-    if (!newComment.trim()) {
+  const handleAddComent = async () => {
+    if (!newComent.trim()) {
       Alert.alert('오류', '댓글 내용을 입력하세요.');
       return;
     }
 
     try {
-      const res = await fetch(`${API_URL}/comments/add`, {
+      const res = await fetch(`${API_URL}/coments/add`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          coment_content: newComment,
+          coment_content: newComent,
           community_no: communityNo,
           user_no: userNo,
         }),
@@ -46,8 +46,8 @@ const CommunityComent = () => {
 
       if (res.ok) {
         Alert.alert('성공', '댓글이 등록되었습니다.');
-        setNewComment('');
-        fetchComments();
+        setNewComent('');
+        fetchComents();
       } else {
         console.error('댓글 등록 실패:', res.status);
         Alert.alert('오류', '댓글 등록에 실패했습니다.');
@@ -59,14 +59,13 @@ const CommunityComent = () => {
   };
 
   useEffect(() => {
-    fetchComments();
+    fetchComents();
   }, [communityNo]);
-
   const renderItem = ({ item }: { item: any }) => (
-    <View style={styles.commentContainer}>
-      <Text style={styles.commentTitle}>{item.coment_content}</Text>
-      <Text style={styles.commentAuthor}>작성자: {item.user_nickname}</Text>
-      <Text style={styles.commentDate}>등록일자: {new Date(item.coment_at).toLocaleString()}</Text>
+    <View style={styles.comentContainer}>
+      <Text style={styles.comentTitle}>{item.coment_content}</Text>
+      <Text style={styles.comentAuthor}>작성자: {item.user_nickname}</Text>
+      <Text style={styles.comentDate}>등록일자: {new Date(item.coment_at).toLocaleString()}</Text>
       {item.user_no === Number(userNo) && (
         <View style={styles.actionButtonsContainer}>
           <TouchableOpacity
@@ -80,7 +79,7 @@ const CommunityComent = () => {
                 community_no: communityNo,
               });
               router.push({
-                pathname: './communityComentEdit',
+                pathname: '/community/communityComentEdit',
                 params: {
                   coment_no: item.coment_no,
                   coment_content: item.coment_content,
@@ -97,12 +96,12 @@ const CommunityComent = () => {
             style={styles.actionButton}
             onPress={async () => {
               try {
-                const res = await fetch(`${API_URL}/comments/${item.coment_no}`, {
+                const res = await fetch(`${API_URL}/coments/${item.coment_no}`, {
                   method: 'DELETE',
                 });
                 if (res.ok) {
                   Alert.alert('성공', '댓글이 삭제되었습니다.');
-                  fetchComments();
+                  fetchComents();
                 } else {
                   Alert.alert('오류', '댓글 삭제에 실패했습니다.');
                 }
@@ -123,39 +122,48 @@ const CommunityComent = () => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* 상단 헤더 */}
       <View style={styles.headerContainer}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() =>
-            router.push({
-              pathname: './communityDetail',
-              params: { communityNo, post: JSON.stringify(post) }, // post 데이터를 JSON 문자열로 전달
-            })
-          }
+          onPress={async () => {
+            try {
+              const response = await fetch(`${API_URL}/communities/${communityNo}`);
+              if (!response.ok) {
+                throw new Error('Failed to fetch community details');
+              }
+              const communityData = await response.json();
+              router.push({
+                pathname: '/community/communityDetail',
+                params: { post: JSON.stringify(communityData) },
+              });
+            } catch (error) {
+              console.error('Error fetching community details:', error);
+              Alert.alert('오류', '상세페이지 데이터를 불러오는데 실패했습니다.');
+            }
+          }}
         >
           <Text style={styles.backButtonText}>뒤로가기</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>댓글 {comments.length}</Text>
+        <Text style={styles.headerTitle}>댓글 {coments.length}</Text>
       </View>
 
       {/* 댓글 입력 */}
-      <View style={styles.addCommentContainer}>
+      <View style={styles.addComentContainer}>
         <TextInput
           style={styles.input}
-          value={newComment}
-          onChangeText={setNewComment}
+          value={newComent}
+          onChangeText={setNewComent}
           placeholder="댓글을 남겨보세요."
         />
-        <Button title="등록" onPress={handleAddComment} />
+        <Button title="등록" onPress={handleAddComent} />
       </View>
 
       {/* 댓글 목록 */}
       <FlatList
-        data={comments}
+        data={coments}
         keyExtractor={(item) => item.coment_no.toString()}
         renderItem={renderItem}
-        onRefresh={fetchComments}
+        onRefresh={fetchComents}
         refreshing={false}
       />
     </KeyboardAvoidingView>
@@ -187,7 +195,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  addCommentContainer: {
+  addComentContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
@@ -202,21 +210,21 @@ const styles = StyleSheet.create({
     padding: 8,
     marginRight: 8,
   },
-  commentContainer: {
+  comentContainer: {
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
   },
-  commentTitle: {
+  comentTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 4,
   },
-  commentAuthor: {
+  comentAuthor: {
     fontSize: 14,
     marginBottom: 4,
   },
-  commentDate: {
+  comentDate: {
     fontSize: 12,
     color: '#555',
     marginBottom: 8,

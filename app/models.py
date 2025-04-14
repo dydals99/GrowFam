@@ -51,7 +51,7 @@ class CommunityLike(Base):
     user_no = Column(Integer, ForeignKey("tb_users.user_no"))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-class CommunityComment(Base):
+class CommunityComent(Base):
     __tablename__ = "tb_community_coment"
 
     coment_no = Column(Integer, primary_key=True, index=True)

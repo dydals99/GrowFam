@@ -14,7 +14,7 @@ type Post = {
 };
 
 const mockUser = {
-  user_no: 1, // 실제 로그인된 유저 번호로 교체
+  user_no: 1,
 };
 
 export default function CommunityDetail() {
@@ -24,7 +24,7 @@ export default function CommunityDetail() {
   const [likeCount, setLikeCount] = useState<number>(0);
   const [hasLiked, setHasLiked] = useState<boolean>(false);
   const [showMoreMenu, setShowMoreMenu] = useState<boolean>(false);
-  const [commentCount, setCommentCount] = useState<number>(0);
+  const [comentCount, setComentCount] = useState<number>(0);
   type Coment = {
     id: number;
     text: string;
@@ -32,8 +32,8 @@ export default function CommunityDetail() {
     coment_at: string;
   };
   
-  const [coments, setComments] = useState<Coment[]>([]);
-  const [loadingComments, setLoadingComments] = useState<boolean>(false);
+  const [coments, setComents] = useState<Coment[]>([]);
+  const [loadingComments, setLoadingComents] = useState<boolean>(false);
 
   const post: Post | undefined = params.post ? JSON.parse(params.post) : undefined;
 
@@ -46,11 +46,10 @@ export default function CommunityDetail() {
 
   useEffect(() => {
     if (!post) {
-      console.error('post 데이터가 전달되지 않았습니다. params:', params);
+      //console.error('post 데이터가 전달되지 않았습니다. params:', params);
     }
   }, [params]);
 
-  // 좋아요 상태 및 숫자 가져오기
   const fetchLikeStatus = async () => {
     try {
       const res = await fetch(
@@ -126,9 +125,9 @@ export default function CommunityDetail() {
     router.push('./community');
   };
 
-  const fetchComments = async () => {
+  const fetchComents = async () => {
     if (!post) return;
-    setLoadingComments(true);
+    setLoadingComents(true);
     try {
       const res = await fetch(`${API_URL}/comments/list?community_no=${post.community_no}`);
       if (res.ok) {
@@ -140,22 +139,22 @@ export default function CommunityDetail() {
           coment_at: comment.coment_at,
           user_id: comment.user_no,
         }));
-        setComments(formattedComments);
+        setComents(formattedComments);
       } else {
         console.error('댓글 불러오기 실패:', res.status);
-        setComments([]);
+        setComents([]);
       }
     } catch (error) {
       console.error('댓글 요청 에러:', error);
-      setComments([]);
+      setComents([]);
     } finally {
-      setLoadingComments(false);
+      setLoadingComents(false);
     }
   };
 
   useEffect(() => {
     if (modalVisible) {
-      fetchComments();
+      fetchComents();
     }
   }, [modalVisible]);
 
@@ -226,7 +225,7 @@ export default function CommunityDetail() {
               style={[styles.iconButton, { marginLeft: 25 }]}
               onPress={() => router.push(`/community/communityComent?communityNo=${post.community_no}&userNo=${mockUser.user_no}`)}
             >
-              <Text style={styles.iconText}>💬 {commentCount}</Text>
+              <Text style={styles.iconText}>💬 {comentCount}</Text>
             </TouchableOpacity>
           </View>
         </View>  
@@ -318,13 +317,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     backgroundColor: "#f9f9f9",
-    textAlignVertical: "top", // Android에서도 위에서부터 시작
+    textAlignVertical: "top", 
     minHeight: 410,
   },
   footerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between", // 왼쪽(목록) / 오른쪽(하트, 댓글)
+    justifyContent: "space-between", 
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderTopWidth: 1,

@@ -32,15 +32,7 @@ export default function RootLayout() {
         {/* 탭 구조는 기본 루트로 렌더링 */}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
-        {/* <Stack.Screen
-          name="(tabs)/community/communityDetail"
-          options={{
-            presentation: 'card',
-            gestureEnabled: true,
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen name="community/communityWrite" options={{ presentation: 'modal', title: '글 작성' }} /> */}
+    
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

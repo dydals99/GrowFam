@@ -5,21 +5,20 @@ from app.database import get_db
 from typing import List
 
 router = APIRouter(
-    prefix="/comments",
-    tags=["comments"]
+    prefix="/coments",
+    tags=["coments"]
 )
 
-@router.post("/add", response_model=schemas.CommunityCommentOut)
-def create_comment(comment: schemas.CommunityCommentCreate, db: Session = Depends(get_db)):
-    db_comment = models.CommunityComment(**comment.dict())
-    db.add(db_comment)
+@router.post("/add", response_model=schemas.CommunityComentOut)
+def create_comment(comment: schemas.CommunityComentCreate, db: Session = Depends(get_db)):
+    db_coment = models.CommunityComent(**comment.dict())
+    db.add(db_coment)
     db.commit()
-    db.refresh(db_comment)
+    db.refresh(db_coment)
 
-    # user_nickname을 포함한 데이터를 반환하도록 수정
     user_nickname = (
         db.query(models.User.user_nickname)
-        .filter(models.User.user_no == db_comment.user_no)
+        .filter(models.User.user_no == db_coment.user_no)
         .scalar()
     )
 
@@ -27,63 +26,61 @@ def create_comment(comment: schemas.CommunityCommentCreate, db: Session = Depend
         raise HTTPException(status_code=404, detail="User not found")
 
     return {
-        "coment_no": db_comment.coment_no,
-        "coment_content": db_comment.coment_content,
-        "coment_at": db_comment.coment_at,
-        "community_no": db_comment.community_no,
-        "user_no": db_comment.user_no,
+        "coment_no": db_coment.coment_no,
+        "coment_content": db_coment.coment_content,
+        "coment_at": db_coment.coment_at,
+        "community_no": db_coment.community_no,
+        "user_no": db_coment.user_no,
         "user_nickname": user_nickname,
     }
 
-@router.delete("/{comment_id}")
-def delete_comment(comment_id: int, db: Session = Depends(get_db)):
-    db_comment = db.query(models.CommunityComment).filter(models.CommunityComment.coment_no == comment_id).first()
-    if not db_comment:
-        raise HTTPException(status_code=404, detail="Comment not found")
-    db.delete(db_comment)
+@router.delete("/{coment_no}")
+def delete_comment(coment_no: int, db: Session = Depends(get_db)):
+    db_coment = db.query(models.CommunityComent).filter(models.CommunityComent.coment_no == coment_no).first()
+    if not db_coment:
+        raise HTTPException(status_code=404, detail="댓글을 찾을 수 없음.")
+    db.delete(db_coment)
     db.commit()
-    return {"message": "Comment deleted successfully"}
+    return {"삭제 되었습니다."}
 
-@router.get("/list", response_model=List[schemas.CommunityCommentOut])
+@router.get("/list", response_model=List[schemas.CommunityComentOut])
 def get_comments(community_no: int, db: Session = Depends(get_db)):
     comments = (
         db.query(
-            models.CommunityComment.coment_no,
-            models.CommunityComment.coment_content,
-            models.CommunityComment.coment_at,
-            models.CommunityComment.community_no,
-            models.CommunityComment.user_no,
+            models.CommunityComent.coment_no,
+            models.CommunityComent.coment_content,
+            models.CommunityComent.coment_at,
+            models.CommunityComent.community_no,
+            models.CommunityComent.user_no,
             models.User.user_nickname
         )
-        .join(models.User, models.CommunityComment.user_no == models.User.user_no)
-        .filter(models.CommunityComment.community_no == community_no)
+        .join(models.User, models.CommunityComent.user_no == models.User.user_no)
+        .filter(models.CommunityComent.community_no == community_no)
         .all()
     )
 
-    # 디버깅용 로그 추가
-    print("Fetched comments:", comments)
+    print("Fetched coments:", comments)
 
     return comments
 
-@router.get("/", response_model=List[schemas.CommunityCommentOut])
+@router.get("/", response_model=List[schemas.CommunityComentOut])
 def get_comments_root(community_no: int, db: Session = Depends(get_db)):
     return get_comments(community_no, db)
 
-@router.put("/{comment_id}", response_model=schemas.CommunityCommentOut)
-def update_comment(comment_id: int, comment: schemas.CommunityCommentUpdate, db: Session = Depends(get_db)):
-    print(f"Received comment_id: {comment_id}")
-    db_comment = db.query(models.CommunityComment).filter(models.CommunityComment.coment_no == comment_id).first()
-    if not db_comment:
+@router.put("/{coment_no}", response_model=schemas.CommunityComentOut)
+def update_coment(coment_no: int, coment: schemas.CommunityComentUpdate, db: Session = Depends(get_db)):
+    print(f"Received comment_no: {coment_no}")
+    db_coment = db.query(models.CommunityComent).filter(models.CommunityComent.coment_no == coment_no).first()
+    if not db_coment:
         raise HTTPException(status_code=404, detail="Comment not found")
-    for key, value in comment.dict(exclude_unset=True).items():
-        setattr(db_comment, key, value)
+    for key, value in coment.dict(exclude_unset=True).items():
+        setattr(db_coment, key, value)
     db.commit()
-    db.refresh(db_comment)
+    db.refresh(db_coment)
 
-    # user_nickname을 추가로 조회
     user_nickname = (
         db.query(models.User.user_nickname)
-        .filter(models.User.user_no == db_comment.user_no)
+        .filter(models.User.user_no == db_coment.user_no)
         .scalar()
     )
 
@@ -91,10 +88,10 @@ def update_comment(comment_id: int, comment: schemas.CommunityCommentUpdate, db:
         raise HTTPException(status_code=404, detail="User not found")
 
     return {
-        "coment_no": db_comment.coment_no,
-        "coment_content": db_comment.coment_content,
-        "coment_at": db_comment.coment_at,
-        "community_no": db_comment.community_no,
-        "user_no": db_comment.user_no,
+        "coment_no": db_coment.coment_no,
+        "coment_content": db_coment.coment_content,
+        "coment_at": db_coment.coment_at,
+        "community_no": db_coment.community_no,
+        "user_no": db_coment.user_no,
         "user_nickname": user_nickname,
     }

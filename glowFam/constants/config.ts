@@ -1,1 +1,1 @@
-export const API_URL = `http://localhost:8080`; // 로컬 IP 주소로 변경
+export const API_URL = `http://172.111.92.76:8080`;
