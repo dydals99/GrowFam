@@ -48,7 +48,7 @@ const GalleryScreen: React.FC = () => {
       return;
     }
     try {
-      const response = await fetch(`${API_URL}/gallery/combine/`, {
+      const response = await fetch(`${API_URL}/gallery/combine`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ photo_ids: selectedPhotoIds }),

@@ -23,7 +23,7 @@ const OnCamera: React.FC = () => {
         return;
       }
       try {
-        const response = await fetch(`${API_URL}/gallery/latest-photo/`);
+        const response = await fetch(`${API_URL}/gallery/latest-photo`);
         const data = await response.json();
   
         if (data.contour_path) {
@@ -71,7 +71,7 @@ const OnCamera: React.FC = () => {
             type: "image/jpeg",
           } as any);
 
-          const serverResponse = await fetch(`${API_URL}/act_camera/upload/`, {
+          const serverResponse = await fetch(`${API_URL}/act_camera/upload`, {
             method: 'POST',
             body: formData,
             headers: {
