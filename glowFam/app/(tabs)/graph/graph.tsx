@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, FlatList, Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { API_URL } from '../../../constants/config';
 
 interface FamilyData {
@@ -24,6 +25,12 @@ const GlowFamScreen: React.FC = () => {
   useEffect(() => {
     fetchFamilyProgress();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchFamilyProgress();
+    }, [])
+  );
 
   const renderItem = ({ item }: { item: FamilyData }) => (
     <View style={styles.rowContainer}>
@@ -122,7 +129,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   percentText: {
-    width: 50, // 오른쪽 텍스트도 안쪽으로 정렬
+    width: 80, // 오른쪽 텍스트도 안쪽으로 정렬
     textAlign: 'left',
     fontSize: 16,
     color: '#333',

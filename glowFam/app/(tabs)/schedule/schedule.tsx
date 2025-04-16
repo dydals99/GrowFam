@@ -1,6 +1,7 @@
 // schedule.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, SafeAreaView, Alert, ScrollView,} from "react-native";
+import { useFocusEffect } from '@react-navigation/native';
 import { API_URL } from "../../../constants/config";
 
 interface ScheduleType {
@@ -12,7 +13,7 @@ interface ScheduleType {
   lastCheckDate?: string; 
 }
 
-const famliy_no = 34;
+const famliy_no = 1;
 
 export default function ScheduleScreen() {
   const [monthGoal, setMonthGoal] = useState("");
@@ -101,10 +102,12 @@ export default function ScheduleScreen() {
     }
   };
 
-  useEffect(() => {
-    fetchFamilyGoal();
-    fetchSchedules();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchFamilyGoal();
+      fetchSchedules();
+    }, [])
+  );
 
   const registerSchedule = async () => {
     const scheduleDate = getTodayString();

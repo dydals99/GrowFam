@@ -1,8 +1,15 @@
 // app/(tabs)/index.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { StyleSheet, View, Text, SafeAreaView } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
 import HeaderNav from "./comm/headerNav";
+import { API_URL } from "../../constants/config";
+
+interface GoalProgress {
+  scheduleContent: string;
+  completedCount: number;
+  totalCount: number;
+}
 
 // 달력 locale 설정을 앱 시작 시 한 번만 실행하도록 컴포넌트 바깥에 선언
 LocaleConfig.locales["kr"] = {
@@ -29,6 +36,23 @@ const getToday = () => {
 
 export default function MainScreen() {
   const [selectedDate, setSelectedDate] = useState(getToday());
+  const [goalProgress, setGoalProgress] = useState<GoalProgress[]>([]);
+  
+  const fetchGoalProgress = async () => {
+    try {
+      const family_no = 1;
+      const response = await fetch(`${API_URL}/schedule/${family_no}`);
+      if (!response.ok) throw new Error("목표 진행 데이터를 가져오는데 실패했습니다.");
+      const data = await response.json();
+      setGoalProgress(data);
+    } catch (error: any) {
+      console.error("오류:", error.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchGoalProgress();
+  }, []);
 
   const handleDayPress = (day: any) => {
     setSelectedDate(day.dateString);
@@ -56,19 +80,22 @@ export default function MainScreen() {
       {/* 목표 달성 현황 */}
       <View style={styles.goalsContainer}>
         <Text style={styles.sectionTitle}>목표 달성 현황</Text>
-        <Text style={styles.subTitle}>엄마 / 아빠 / 아이</Text>
-        <View style={styles.goalItem}>
-          <Text style={styles.goalLabel}>식단</Text>
-          <Text style={styles.goalCount}>3 of 3</Text>
-        </View>
-        <View style={styles.goalItem}>
-          <Text style={styles.goalLabel}>운동</Text>
-          <Text style={styles.goalCount}>3 of 3</Text>
-        </View>
-        <View style={styles.goalItem}>
-          <Text style={styles.goalLabel}>기타</Text>
-          <Text style={styles.goalCount}>3 of 3</Text>
-        </View>
+        {goalProgress.map((goal, index) => (
+          <View key={index} style={styles.goalItem}>
+            <Text style={styles.goalContent}>{goal.scheduleContent}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 5 }}>
+              <View style={styles.progressBarBackground}>
+                <View
+                  style={{
+                    ...styles.progressBarFill,
+                    width: `${(goal.completedCount / goal.totalCount) * 100}%`,
+                  }}
+                />
+              </View>
+              <Text style={styles.goalCount}>{goal.completedCount} of {goal.totalCount}</Text>
+            </View>
+          </View>
+        ))}
       </View>
     </SafeAreaView>
   );
@@ -106,23 +133,31 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 5,
   },
-  subTitle: {
-    fontSize: 14,
-    marginBottom: 15,
-    color: "#555",
-  },
   goalItem: {
-    flexDirection: "row",
+    flexDirection: "column",
     justifyContent: "space-between",
     marginBottom: 8,
   },
-  goalLabel: {
+  goalContent: {
     fontSize: 16,
     color: "#333",
+    width: "100%",
   },
   goalCount: {
     fontSize: 16,
     fontWeight: "600",
     color: "#333",
+  },
+  progressBarBackground: {
+    flex: 1,
+    height: 10,
+    backgroundColor: "#e0e0e0",
+    borderRadius: 5,
+    overflow: "hidden",
+    marginVertical: 10,
+  },
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: "#76c7c0",
   },
 });
