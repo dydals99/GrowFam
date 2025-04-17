@@ -5,9 +5,9 @@
     "moduleResolution": "bundler",
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "baseUrl": ".",                    // 프로젝트 루트로 설정
+    "baseUrl": ".",                
     "paths": {
-      "@/*": ["./*"]                  // '@/' 별칭이 프로젝트 루트의 모든 파일을 참조하도록 설정
+      "@/*": ["./*"]                  
     }
     
   },
