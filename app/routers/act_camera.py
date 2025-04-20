@@ -21,7 +21,7 @@ def extract_person_contour(image_path: str, output_path: str):
     # 이미지 로드
     image = cv2.imread(image_path)
     if image is None:
-        print("이미지 로드 실패:", image_path)
+        print(f"이미지 로드 실패: {image_path}")
         return None
 
     # RGB로 변환
@@ -32,7 +32,7 @@ def extract_person_contour(image_path: str, output_path: str):
     with mp_selfie_segmentation.SelfieSegmentation(model_selection=1) as segmenter:
         results = segmenter.process(image_rgb)
         if results.segmentation_mask is None:
-            print("세그멘테이션 실패")
+            print("세그멘테이션 실패: segmentation_mask가 None입니다.")
             return None
         mask = results.segmentation_mask
 
@@ -46,7 +46,7 @@ def extract_person_contour(image_path: str, output_path: str):
     # 외곽 윤곽선 추출
     contours, _ = cv2.findContours(cleaned_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if not contours:
-        print("윤곽선 검출 실패")
+        print("윤곽선 검출 실패: contours가 비어 있습니다.")
         return None
 
     # 가장 큰 윤곽선을 사람 외곽으로 가정
@@ -59,36 +59,41 @@ def extract_person_contour(image_path: str, output_path: str):
     # 결과 이미지 저장
     success = cv2.imwrite(output_path, contour_image)
     if not success:
-        print("결과 이미지 저장 실패")
+        print(f"결과 이미지 저장 실패: {output_path}")
         return None
+
+    print(f"윤곽선 추출 성공: {output_path}")
     return output_path
 
+# 윤곽선 추출 후 저장 경로를 수정하고 DB에 저장되도록 로직 추가
 @router.post("/upload")
 async def upload_file(file: UploadFile, request: Request, db: Session = Depends(get_db)) -> JSONResponse:
-    # 저장할 디렉토리가 없으면 생성 (이미 생성한 경우는 무시됨)
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-    # 파일 저장 경로 (서버 내부 경로)
     upload_path = os.path.join(UPLOAD_DIR, file.filename)
-    upload_path = upload_path.replace("\\", "/")  # OS별 경로 구분자 정리
+    upload_path = upload_path.replace("\\", "/")
 
     try:
-        # aiofiles를 사용해 파일을 비동기로 저장
         async with aiofiles.open(upload_path, "wb") as out_file:
             content = await file.read()
             await out_file.write(content)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"파일 저장 실패: {e}")
 
-    # 절대 URL 생성: 예) "http://172.30.1.26:8080/static/photo_xxx.jpg"
-    base_url = str(request.base_url).rstrip("/")  # 예: "http://172.30.1.26:8080"
-    absolute_url = f"{base_url}/static/{file.filename}"
+    # 윤곽선 추출 및 저장
+    contour_path = os.path.join(UPLOAD_DIR, f"contour_{file.filename}")
+    contour_path = contour_path.replace("\\", "/")
+    extracted_path = extract_person_contour(upload_path, contour_path)
+    if not extracted_path:
+        raise HTTPException(status_code=500, detail="윤곽선 추출 실패")
 
-    # DB에 저장할 때, contour_path에 절대 URL 저장 (모델에 따라 contour_path 컬럼 사용)
+    base_url = str(request.base_url).rstrip("/")
+    absolute_url = f"{base_url}/static/{os.path.basename(extracted_path)}"
+
     try:
         new_photo = UserPhoto(
-            file_name = file.filename,
-            contour_path = absolute_url
+            file_name=file.filename,
+            contour_path=absolute_url
         )
         db.add(new_photo)
         db.commit()
@@ -98,6 +103,6 @@ async def upload_file(file: UploadFile, request: Request, db: Session = Depends(
 
     return JSONResponse(content={
         "filename": file.filename,
-        "contour_path": absolute_url,  # 클라이언트에 절대 URL 반환
+        "contour_path": absolute_url,
         "db_id": new_photo.file_no
     })
