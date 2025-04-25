@@ -78,3 +78,12 @@ class CommunityComentOut(CommunityComentBase):
 
     class Config:
         orm_mode = True
+
+class UserCreate(BaseModel):
+    user_name: str
+    user_nickname: str
+    user_email: str
+    user_password: str
+
+    class Config:
+        from_attributes = True

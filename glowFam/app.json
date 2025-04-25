@@ -5,14 +5,18 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "com.glowfam.app",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
+      "bundleIdentifier": "com.app.glowFam",
+      "bundelNumber": "1.0.0",
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
+        "package": "com.app.glowFam",
+        "vaesionCode": 1,
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       }
@@ -36,6 +40,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "020ef31f-7744-4e35-b245-4b95ebe2e5a8"
+      }
     }
   }
 }

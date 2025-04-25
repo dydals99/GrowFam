@@ -22,7 +22,7 @@ export default function CommunityWrite() {
     const postData = {
       community_title: title, // 서버에서 기대하는 필드 이름으로 변경
       community_content: content, // 서버에서 기대하는 필드 이름으로 변경
-      user_no: 2, 
+      user_no: 1, 
     };
   
     try {

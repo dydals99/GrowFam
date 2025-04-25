@@ -4,6 +4,47 @@ import { View, TouchableOpacity, Text, StyleSheet, Dimensions } from "react-nati
 
 const { width } = Dimensions.get("window");
 
+const getIcon = (routeName: string, isFocused: boolean) => {
+  const color = isFocused ? 'blue' : 'gray';
+  switch (routeName.toLowerCase()) {
+    case 'index':
+      return (
+        <View style={{ alignItems: 'center' }}>
+          <Text style={{ color, fontSize: 24 }}>🏠</Text>
+          <Text style={{ color, fontSize: 12 }}>홈</Text>
+        </View>
+      );
+    case 'community/community':
+      return (
+        <View style={{ alignItems: 'center' }}>
+          <Text style={{ color, fontSize: 24 }}>💌</Text>
+          <Text style={{ color, fontSize: 12 }}>커뮤니티</Text>
+        </View>
+      );
+    case 'schedule/schedule':
+      return (
+        <View style={{ alignItems: 'center' }}>
+          <Text style={{ color, fontSize: 24 }}>📝</Text>
+          <Text style={{ color, fontSize: 12 }}>일정</Text>
+        </View>
+      );
+    case 'graph/graph':
+      return (
+        <View style={{ alignItems: 'center' }}>
+          <Text style={{ color, fontSize: 24 }}>📊</Text>
+          <Text style={{ color, fontSize: 12 }}>그래프</Text>
+        </View>
+      );
+    default:
+      return (
+        <View style={{ alignItems: 'center' }}>
+          <Text style={{ color, fontSize: 24 }}>❓</Text>
+          <Text style={{ color, fontSize: 12 }}>알 수 없음</Text>
+        </View>
+      );
+  }
+};
+
 export default function BottomNav({ state, descriptors, navigation }: BottomTabBarProps) {
   return (
     <View style={styles.bottomNav}>
@@ -22,8 +63,9 @@ export default function BottomNav({ state, descriptors, navigation }: BottomTabB
 
         return (
           <TouchableOpacity key={route.key} style={styles.navItem} onPress={onPress}>
+            {getIcon(route.name, isFocused)}
             <Text style={[styles.navIcon, isFocused ? styles.focused : null]}>
-              {label}
+              
             </Text>
           </TouchableOpacity>
         );

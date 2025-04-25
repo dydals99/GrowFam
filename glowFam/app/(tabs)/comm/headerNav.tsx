@@ -1,16 +1,53 @@
-import React from "react";
-import { View, TouchableOpacity, Text, StyleSheet } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, TouchableOpacity, Text, StyleSheet, Image } from "react-native";
 import { useRouter } from "expo-router";
+import axios from "axios";
+import { API_URL } from '../../../constants/config';
 
 const HeaderNav: React.FC = () => {
-  const router = useRouter(); // ✅ useRouter는 함수형 컴포넌트 내부에서만 호출 가능
+  const router = useRouter();
+  const [isMenuOpen, setIsMenuOpen] = useState(false); // 메뉴 열림 상태 관리
+ 
 
   return (
     <View style={styles.header}>
       {/* ☰ 메뉴 버튼 */}
-      <TouchableOpacity style={styles.menuButton} onPress={() => console.log("메뉴 열기")}>
+      <TouchableOpacity
+        style={styles.menuButton}
+        onPress={() => setIsMenuOpen(!isMenuOpen)} // 메뉴 열기/닫기 토글
+      >
         <Text style={styles.menuIcon}>☰</Text>
       </TouchableOpacity>
+
+      {/* 드롭다운 메뉴 */}
+      {isMenuOpen && (
+        <View style={styles.dropdownMenu}>
+          {/* 프로필 사진 */}
+          <View style={styles.profileSection}>
+            <Image
+              source={require("../../../assets/images/다운로드.jpg")} // 기본 프로필 이미지 설정
+              style={styles.profileImage}
+            />
+           
+          </View>
+
+          {/* 정보 관리 */}
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => console.log("정보 관리 클릭")}
+          >
+            <Text style={styles.menuText}>정보 관리</Text>
+          </TouchableOpacity>
+
+          {/* 로그아웃 */}
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => console.log("로그아웃 클릭")}
+          >
+            <Text style={styles.menuText}>로그아웃</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* 화면 제목 */}
       <Text style={styles.headerTitle}>메인 화면</Text>
@@ -51,5 +88,34 @@ const styles = StyleSheet.create({
   },
   cameraIcon: {
     fontSize: 24,
+  },
+  dropdownMenu: {
+    position: "absolute",
+    top: 60,
+    left: 15,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 5,
+    padding: 10,
+    zIndex: 1000,
+  },
+  profileSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  profileImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  
+  menuItem: {
+    paddingVertical: 10,
+  },
+  menuText: {
+    fontSize: 16,
   },
 });

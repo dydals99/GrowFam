@@ -25,10 +25,10 @@ class CombineImage(Base):
 class User(Base):
     __tablename__ = "tb_users"
     user_no = Column(Integer, primary_key=True, index=True)
-    user_name = Column(String(20))
+    user_name = Column(String(20), nullable=True) 
     user_nickname = Column(String(20), nullable=False, unique=True)
     user_email = Column(String(255), nullable=False)
-    hashed_pw = Column(String(100), nullable=False)
+    user_password = Column(String(100), nullable=False)
     user_role = Column(String(20), default="member")
     user_regist_at = Column(TIMESTAMP, server_default=func.now())
 

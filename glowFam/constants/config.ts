@@ -1,1 +1,1 @@
-export const API_URL = `http://로컬호스트:8080`;
+export const API_URL = `http://172.30.1.94:8080`;

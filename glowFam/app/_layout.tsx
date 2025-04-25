@@ -5,10 +5,11 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import AuthMiddleware from './(tabs)/users/AuthMiddleware';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+export default function RootLayout() { 
   const colorScheme = useColorScheme();
 
   const [loaded] = useFonts({
@@ -28,12 +29,13 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        {/* 탭 구조는 기본 루트로 렌더링 */}
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-    
-      </Stack>
+      <AuthMiddleware>
+        <Stack>
+          {/* 탭 구조는 기본 루트로 렌더링 */}
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="+not-found" />
+        </Stack>
+      </AuthMiddleware>
       <StatusBar style="auto" />
     </ThemeProvider>
   );

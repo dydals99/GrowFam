@@ -1,12 +1,13 @@
 // app/(tabs)/index.tsx
 import React, { useState, useEffect } from "react";
-import { StyleSheet, View, Text, SafeAreaView } from "react-native";
+import { StyleSheet, View, Text, SafeAreaView, Button } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
 import HeaderNav from "./comm/headerNav";
 import { API_URL } from "../../constants/config";
+import { useRouter } from 'expo-router';
 
 interface GoalProgress {
-  scheduleContent: string;
+  scheduleContent: string; 
   completedCount: number;
   totalCount: number;
 }
@@ -37,6 +38,7 @@ const getToday = () => {
 export default function MainScreen() {
   const [selectedDate, setSelectedDate] = useState(getToday());
   const [goalProgress, setGoalProgress] = useState<GoalProgress[]>([]);
+  const router = useRouter();
   
   const fetchGoalProgress = async () => {
     try {
@@ -96,6 +98,12 @@ export default function MainScreen() {
             </View>
           </View>
         ))}
+      </View>
+      <View style={styles.buttonContainer}>
+        <Button
+          title="로그인 화면으로 이동"
+          onPress={() => router.push('./users/login')}
+        />
       </View>
     </SafeAreaView>
   );
@@ -159,5 +167,10 @@ const styles = StyleSheet.create({
   progressBarFill: {
     height: "100%",
     backgroundColor: "#76c7c0",
+  },
+  buttonContainer: {
+    margin: 10,
+    borderRadius: 10,
+    overflow: "hidden",
   },
 });
