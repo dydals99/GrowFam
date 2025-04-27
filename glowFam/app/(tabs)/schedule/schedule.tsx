@@ -3,6 +3,7 @@ import React, { useState, useCallback } from "react";
 import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, SafeAreaView, Alert, ScrollView,} from "react-native";
 import { useFocusEffect } from '@react-navigation/native';
 import { API_URL } from "../../../constants/config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface ScheduleType {
   scheduleNo: number;
@@ -13,7 +14,36 @@ interface ScheduleType {
   lastCheckDate?: string; 
 }
 
-const famliy_no = 1;
+let famliy_no = 0;
+
+const fetchFamilyNo = async () => {
+  try {
+    const token = await AsyncStorage.getItem("access_token");
+    if (!token) throw new Error("JWT 토큰이 없습니다.");
+
+    const userResponse = await fetch(`${API_URL}/users/me`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!userResponse.ok) throw new Error("사용자 정보를 가져오는데 실패했습니다.");
+    const userData = await userResponse.json();
+    const user_no = userData.user_no;
+
+    const familyResponse = await fetch(`${API_URL}/users/family/${user_no}`);
+    if (!familyResponse.ok) throw new Error("가족 정보를 가져오는데 실패했습니다.");
+    const familyData = await familyResponse.json();
+    return familyData.family_no;
+  } catch (error) {
+    if (error instanceof Error) {
+      Alert.alert("오류", error.message);
+    } else {
+      Alert.alert("오류", "알 수 없는 오류가 발생했습니다.");
+    }
+    return null;
+  }
+};
 
 export default function ScheduleScreen() {
   const [monthGoal, setMonthGoal] = useState("");
@@ -104,8 +134,15 @@ export default function ScheduleScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchFamilyGoal();
-      fetchSchedules();
+      const initializeData = async () => {
+        const familyNo = await fetchFamilyNo();
+        if (familyNo) {
+          famliy_no = familyNo;
+          fetchFamilyGoal();
+          fetchSchedules();
+        }
+      };
+      initializeData();
     }, [])
   );
 

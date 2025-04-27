@@ -12,6 +12,7 @@ class UserPhoto(Base):
     file_name = Column(String, nullable=False)  # 파일명 (UUID)
     contour_path = Column(String, nullable=False)  # 윤곽선 URL 저장
     uploaded_at = Column(DateTime, server_default=func.now(), nullable=False)  # 업로드 시간
+    
 
 
 class CombineImage(Base):

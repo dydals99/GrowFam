@@ -1,10 +1,11 @@
 // app/(tabs)/index.tsx
 import React, { useState, useEffect } from "react";
-import { StyleSheet, View, Text, SafeAreaView, Button } from "react-native";
+import { StyleSheet, View, Text, SafeAreaView, Button, ActivityIndicator } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
 import HeaderNav from "./comm/headerNav";
 import { API_URL } from "../../constants/config";
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface GoalProgress {
   scheduleContent: string; 
@@ -38,11 +39,32 @@ const getToday = () => {
 export default function MainScreen() {
   const [selectedDate, setSelectedDate] = useState(getToday());
   const [goalProgress, setGoalProgress] = useState<GoalProgress[]>([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   
   const fetchGoalProgress = async () => {
     try {
-      const family_no = 1;
+      const token = await AsyncStorage.getItem("access_token");
+      if (!token) throw new Error("JWT 토큰이 없습니다.");
+
+      // user_no 기반으로 family_no 가져오기
+      const userResponse = await fetch(`${API_URL}/users/me`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!userResponse.ok) throw new Error("사용자 정보를 가져오는데 실패했습니다.");
+      const userData = await userResponse.json();
+      const user_no = userData.user_no;
+
+      const familyResponse = await fetch(`${API_URL}/users/family/${user_no}`);
+      if (!familyResponse.ok) throw new Error("가족 정보를 가져오는데 실패했습니다.");
+      const familyData = await familyResponse.json();
+      const family_no = familyData.family_no;
+
+      // family_no를 사용해 목표 진행 데이터 가져오기
       const response = await fetch(`${API_URL}/schedule/${family_no}`);
       if (!response.ok) throw new Error("목표 진행 데이터를 가져오는데 실패했습니다.");
       const data = await response.json();
@@ -53,12 +75,95 @@ export default function MainScreen() {
   };
 
   useEffect(() => {
+    const checkAuthentication = async () => {
+      try {
+        const token = await AsyncStorage.getItem("access_token");
+        console.log("Retrieved Token:", token); // 디버깅 로그 추가
+
+        if (!token) {
+          console.log("JWT 토큰이 없습니다. 로그인 화면으로 이동합니다.");
+          router.replace("./users/login");
+        } else {
+          const response = await fetch(`${API_URL}/users/me`, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          console.log("API Response Status:", response.status); // 디버깅 로그 추가
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error("사용자 정보를 가져오는데 실패했습니다.", errorData); // 에러 상세 로그 추가
+
+            // 로그인 화면으로 이동
+            if (response.status === 401) {
+              console.log("토큰이 유효하지 않거나 만료되었습니다. 로그인 화면으로 이동합니다.");
+              router.replace("./users/login");
+            }
+
+            throw new Error("사용자 정보를 가져오는데 실패했습니다.");
+          }
+
+          const userData = await response.json();
+          console.log("User Data:", userData); // 디버깅 로그 추가
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.error("오류:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuthentication();
+  }, []);
+
+  useEffect(() => {
     fetchGoalProgress();
+  }, []);
+
+  useEffect(() => {
+    // 현재 접속 중인 사용자 user_no 확인 로그
+    const fetchUserNo = async () => {
+      try {
+        const token = await AsyncStorage.getItem("access_token"); // 저장된 JWT 토큰 가져오기
+        if (!token) throw new Error("JWT 토큰이 없습니다.");
+
+        const response = await fetch(`${API_URL}/users/me`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) throw new Error("사용자 정보를 가져오는데 실패했습니다.");
+        const data = await response.json();
+        console.log("현재 접속 중인 user_no:", data.user_no);
+      } catch (error: any) {
+        console.error("오류:", error.message);
+      }
+    };
+
+    fetchUserNo();
   }, []);
 
   const handleDayPress = (day: any) => {
     setSelectedDate(day.dateString);
   };
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null; // 로그인 화면으로 리다이렉트 중이므로 아무것도 렌더링하지 않음
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -98,12 +203,6 @@ export default function MainScreen() {
             </View>
           </View>
         ))}
-      </View>
-      <View style={styles.buttonContainer}>
-        <Button
-          title="로그인 화면으로 이동"
-          onPress={() => router.push('./users/login')}
-        />
       </View>
     </SafeAreaView>
   );

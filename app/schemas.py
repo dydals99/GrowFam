@@ -23,7 +23,7 @@ class CommunityOut(BaseModel):
     like_count: int
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class CommunityLikeCreate(BaseModel):
     community_no: int
@@ -35,7 +35,7 @@ class CommunityLikeOut(BaseModel):
     user_no: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ScheduleCreate(BaseModel):
     famliy_no: int
@@ -51,14 +51,14 @@ class ScheduleRead(BaseModel):
     schedule_check_count: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ScheduleCheckRead(BaseModel):
     schedule_no: int
     schedule_check_count: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class CommunityComentBase(BaseModel):
     coment_content: str
@@ -77,7 +77,7 @@ class CommunityComentOut(CommunityComentBase):
     user_nickname: str  # 사용자 닉네임 추가
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class UserCreate(BaseModel):
     user_name: str

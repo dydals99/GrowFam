@@ -1,8 +1,48 @@
+import React, { useEffect, useState } from 'react';
+import { View, ActivityIndicator, Text } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { Tabs } from 'expo-router';
 import BottomNav from './comm/bottomNav';
-import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 
 export default function TabsLayout() {
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      const token = await AsyncStorage.getItem('access_token');
+      if (!token) {
+        console.log('No token found');
+        setIsLoading(false); // 로딩 상태 업데이트
+      } else {
+        console.log('Token found, loading main screen');
+        setIsLoading(false); // 로딩 완료
+      }
+    };
+
+    if (isLoading) {
+      checkLoginStatus();
+    }
+  }, [isLoading]);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
+  }
+
+  const token = AsyncStorage.getItem('access_token');
+  if (!token) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>로그인이 필요합니다.</Text>
+      </View>
+    );
+  }
+
   return (
     <Tabs
       screenOptions={({ route }) => {

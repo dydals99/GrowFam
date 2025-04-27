@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import { API_URL } from '../../../constants/config';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -15,9 +16,39 @@ export default function LoginScreen() {
     }
 
     try {
-      await AsyncStorage.setItem('userToken', 'exampleToken');
+      const response = await fetch(`${API_URL}/users/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        Alert.alert('Error', errorData.detail || 'Login failed');
+        return;
+      }
+
+      const data = await response.json();
+      await AsyncStorage.setItem('access_token', data.access_token); // JWT 토큰 저장
+
+      // user_no 가져오기
+      const userResponse = await fetch(`${API_URL}/users/me`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${data.access_token}`,
+        },
+      });
+
+      if (!userResponse.ok) {
+        Alert.alert('Error', 'Failed to fetch user information');
+        return;
+      }
+
+      const userData = await userResponse.json();
+      console.log('현재 접속 중인 user_no:', userData.user_no);
+
       Alert.alert('Success', 'Login successful!');
-      router.replace('./(tabs)/index');
+      router.replace('./index'); // 올바른 경로로 수정
     } catch (error) {
       console.error('Failed to log in:', error);
       Alert.alert('Error', 'Failed to log in');

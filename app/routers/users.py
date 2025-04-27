@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import User
+from app.models import User, Family
 from app.schemas import UserCreate
 from passlib.context import CryptContext
 import random
@@ -10,6 +10,11 @@ from pydantic import BaseModel, EmailStr
 from fastapi.responses import RedirectResponse
 import smtplib
 from email.mime.text import MIMEText
+from app.utils import create_access_token, get_current_user
+from datetime import timedelta
+
+# Token expiration time in minutes
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 router = APIRouter(
     prefix="/users",
@@ -31,10 +36,14 @@ class EmailVerificationConfirmRequest(BaseModel):
     email: EmailStr
     code: str
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
 # 이메일 전송 함수
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
-EMAIL_ADDRESS = ""  # 발신 이메일 주소
+EMAIL_ADDRESS = "whdydals8604@gmail.com"  # 발신 이메일 주소
 EMAIL_PASSWORD = "jelu brbu lnuq otnh"  # Gmail 앱 비밀번호로 업데이트
 
 def send_email(to_email: str, code: str):
@@ -129,5 +138,35 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 
     print(f"User registered successfully: {new_user.user_no}")  # 디버깅 로그 추가
     return {"success": True, "user_id": new_user.user_no}
+
+@router.post("/login")
+def login(request: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.user_email == request.email).first()
+    if not user or not pwd_context.verify(request.password, user.user_password):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    # DB에서 user_no 가져오기
+    user_no = user.user_no
+
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.user_email, "user_no": user_no},  # user_no 포함
+        expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@router.get("/me")
+def get_current_user_info(current_user: dict = Depends(get_current_user)):
+    # 디버깅 로그 추가
+    print(f"Decoded current user: {current_user}")
+    return {"user_no": current_user.get("user_no"), "email": current_user.get("sub")}
+
+@router.get("/family/{user_no}")
+def get_family_no(user_no: int, db: Session = Depends(get_db)):
+    # tb_users와 tb_family를 조인하여 family_no를 가져옴
+    family_no = db.query(Family.famliy_no).join(User, User.user_no == Family.user_no).filter(User.user_no == user_no).scalar()
+    if not family_no:
+        raise HTTPException(status_code=404, detail="Family not found for the given user_no")
+    return {"family_no": family_no}
 
 
