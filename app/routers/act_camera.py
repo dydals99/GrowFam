@@ -2,6 +2,7 @@ import os
 import aiofiles
 import cv2
 import numpy as np
+import pyttsx3
 import mediapipe as mp
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
