@@ -4,11 +4,12 @@ import cv2
 import numpy as np
 import pyttsx3
 import mediapipe as mp
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import UserPhoto
+import base64
 
 router = APIRouter(
     prefix="/act_camera",
@@ -16,94 +17,123 @@ router = APIRouter(
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_DIR = os.path.join(os.getcwd(), "uploaded_photos")
 
-def extract_person_contour(image_path: str, output_path: str):
-    # 이미지 로드
-    image = cv2.imread(image_path)
-    if image is None:
-        print(f"이미지 로드 실패: {image_path}")
-        return None
+# Mediapipe 초기화
+mpPose = mp.solutions.pose
+mpFaceMesh = mp.solutions.face_mesh
+facemesh = mpFaceMesh.FaceMesh(max_num_faces=2)
+mpDraw = mp.solutions.drawing_utils
+drawing = mpDraw.DrawingSpec(thickness=1, circle_radius=1)
+pose = mpPose.Pose()
 
-    # RGB로 변환
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+face_detector = cv2.CascadeClassifier(os.path.join(BASE_DIR, "haarcascade_frontalface_default.xml"))
 
-    # Mediapipe Selfie Segmentation 사용
-    mp_selfie_segmentation = mp.solutions.selfie_segmentation
-    with mp_selfie_segmentation.SelfieSegmentation(model_selection=1) as segmenter:
-        results = segmenter.process(image_rgb)
-        if results.segmentation_mask is None:
-            print("세그멘테이션 실패: segmentation_mask가 None입니다.")
-            return None
-        mask = results.segmentation_mask
 
-    # 마스크 이진화 (임계값 0.5)
-    binary_mask = (mask > 0.5).astype(np.uint8) * 255
+# 거리 계산 관련 상수
+Known_distance = 20.2  # cm
+Known_width = 15.5  # cm
+GREEN = (0, 255, 0)
 
-    # 모폴로지 연산을 통해 노이즈 제거 및 마스크 정제 (클로징)
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-    cleaned_mask = cv2.morphologyEx(binary_mask, cv2.MORPH_CLOSE, kernel, iterations=2)
+# 초점 거리 계산 함수
+def focal_Length_Finder(measured_distance, real_width, width_in_rf_image):
+    return (width_in_rf_image * measured_distance) / real_width
 
-    # 외곽 윤곽선 추출
-    contours, _ = cv2.findContours(cleaned_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if not contours:
-        print("윤곽선 검출 실패: contours가 비어 있습니다.")
-        return None
+# 거리 계산 함수
+def distance_finder(Focal_Length, real_face_width, face_width_in_frame):
+    return (real_face_width * Focal_Length) / face_width_in_frame
 
-    # 가장 큰 윤곽선을 사람 외곽으로 가정
-    largest_contour = max(contours, key=cv2.contourArea)
+# 얼굴 데이터 추출 함수
+def face_data(image):
+    face_detector = cv2.CascadeClassifier(os.path.join(BASE_DIR, "haarcascade_frontalface_default.xml"))
+    face_width = 0
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    faces = face_detector.detectMultiScale(gray_image, 1.3, 5)
+    for (x, y, w, h) in faces:
+        face_width = w
+    return face_width
 
-    # 원본 이미지에 윤곽선 그리기 (녹색, 두께 5)
-    contour_image = image.copy()
-    cv2.drawContours(contour_image, [largest_contour], -1, (0, 255, 0), 5)
-
-    # 결과 이미지 저장
-    success = cv2.imwrite(output_path, contour_image)
-    if not success:
-        print(f"결과 이미지 저장 실패: {output_path}")
-        return None
-
-    print(f"윤곽선 추출 성공: {output_path}")
-    return output_path
-
-# 윤곽선 추출 후 저장 경로를 수정하고 DB에 저장되도록 로직 추가
-@router.post("/upload")
-async def upload_file(file: UploadFile, request: Request, db: Session = Depends(get_db)) -> JSONResponse:
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-    upload_path = os.path.join(UPLOAD_DIR, file.filename)
-    upload_path = upload_path.replace("\\", "/")
-
+@router.websocket("/ws/distance")
+async def websocket_distance(websocket: WebSocket):
+    await websocket.accept()
     try:
-        async with aiofiles.open(upload_path, "wb") as out_file:
-            content = await file.read()
-            await out_file.write(content)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"파일 저장 실패: {e}")
+        # 참조 이미지 로드
+        ref_image_path = os.path.join(BASE_DIR, "Ref_image.jpg")
+        ref_image = cv2.imread(ref_image_path)
+        if ref_image is None:
+            await websocket.send_text("참조 이미지 로드 실패")
+            return
 
-    # 윤곽선 추출 및 저장
-    contour_path = os.path.join(UPLOAD_DIR, f"contour_{file.filename}")
-    contour_path = contour_path.replace("\\", "/")
-    extracted_path = extract_person_contour(upload_path, contour_path)
-    if not extracted_path:
-        raise HTTPException(status_code=500, detail="윤곽선 추출 실패")
+        # 참조 이미지에서 얼굴 감지
+        ref_image_face_width = face_data(ref_image)
+        if ref_image_face_width == 0:
+            await websocket.send_text("참조 이미지에서 얼굴을 감지하지 못했습니다.")
+            return
 
-    base_url = str(request.base_url).rstrip("/")
-    absolute_url = f"{base_url}/static/{os.path.basename(extracted_path)}"
+        # 초점 거리 계산
+        focal_length = focal_Length_Finder(Known_distance, Known_width, ref_image_face_width)
+        print(f"초점 거리 계산 완료: {focal_length}")
 
+        while True:
+            # 클라이언트로부터 Base64 문자열 수신
+            data = await websocket.receive_text()
+            # Base64 문자열을 디코딩하여 바이트 데이터로 변환
+            image_data = base64.b64decode(data)
+            image = cv2.imdecode(np.frombuffer(image_data, np.uint8), cv2.IMREAD_COLOR)
+
+            # 거리 계산
+            face_width_in_frame = face_data(image)
+            if face_width_in_frame == 0:
+                await websocket.send_text("얼굴을 감지하지 못했습니다.")
+                continue
+
+            distance = distance_finder(focal_length, Known_width, face_width_in_frame)
+            distance = round(distance * 1.1)  # 거리 보정
+            print(f"거리 계산 완료: {distance}")
+
+            # 적절한 위치 유도 메시지
+            if 360 <= distance <= 390:
+                message = "적절한 위치에 있습니다."
+            elif distance < 360:
+                message = "뒤로 물러나세요."
+            else:
+                message = "조금 더 가까이 오세요."
+
+            # 메시지를 클라이언트로 전송
+            await websocket.send_text(f"{message} (거리: {distance}cm)")
+    except WebSocketDisconnect:
+        print("WebSocket 연결 종료")
+
+# /measure_height 엔드포인트
+@router.post("/measure_height")
+async def measure_height(file: UploadFile):
     try:
-        new_photo = UserPhoto(
-            file_name=file.filename,
-            contour_path=absolute_url
-        )
-        db.add(new_photo)
-        db.commit()
-        db.refresh(new_photo)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"DB 저장 실패: {e}")
+        # 이미지 로드
+        image = cv2.imdecode(np.frombuffer(await file.read(), np.uint8), cv2.IMREAD_COLOR)
+        if image is None:
+            raise HTTPException(status_code=400, detail="이미지 로드 실패")
 
-    return JSONResponse(content={
-        "filename": file.filename,
-        "contour_path": absolute_url,
-        "db_id": new_photo.file_no
-    })
+        # Mediapipe를 사용한 키 측정
+        img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        result = pose.process(img_rgb)
+
+        if not result.pose_landmarks:
+            return JSONResponse(content={"message": "포즈 랜드마크를 감지하지 못했습니다.", "height": None})
+
+        # 랜드마크 좌표 추출
+        h, w, _ = image.shape
+        cx1 = cy1 = cx2 = cy2 = None
+        for id, lm in enumerate(result.pose_landmarks.landmark):
+            cx, cy = int(lm.x * w), int(lm.y * h)
+            if id == 32 or id == 31:  # 발목
+                cx1, cy1 = cx, cy
+            if id == 6:  # 어깨
+                cx2, cy2 = cx, cy + 20
+
+        if cx1 and cy1 and cx2 and cy2:
+            d = ((cx2 - cx1)**2 + (cy2 - cy1)**2)**0.5
+            height = round(d * 0.5)  # 키 계산
+            return JSONResponse(content={"message": f"키는 {height}cm입니다.", "height": height})
+        else:
+            return JSONResponse(content={"message": "키를 계산할 수 없습니다.", "height": None})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"오류 발생: {e}")

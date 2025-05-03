@@ -1,29 +1,26 @@
-// app/(tabs)/index.tsx
 import React, { useState, useEffect } from "react";
-import { StyleSheet, View, Text, SafeAreaView, Button, ActivityIndicator } from "react-native";
+import { StyleSheet, View, Text, SafeAreaView, ActivityIndicator, Alert } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
 import HeaderNav from "./comm/headerNav";
 import { API_URL } from "../../constants/config";
-import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface GoalProgress {
-  scheduleContent: string; 
+  scheduleContent: string;
   completedCount: number;
   totalCount: number;
 }
 
-// 달력 locale 설정을 앱 시작 시 한 번만 실행하도록 컴포넌트 바깥에 선언
+// 달력 locale 설정
 LocaleConfig.locales["kr"] = {
   monthNames: [
     "1월", "2월", "3월", "4월", "5월", "6월",
-    "7월", "8월", "9월", "10월", "11월", "12월"
+    "7월", "8월", "9월", "10월", "11월", "12월",
   ],
-  dayNames: [
-    "일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"
-  ],
+  dayNames: ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"],
   dayNamesShort: ["일", "월", "화", "수", "목", "금", "토"],
-  today: "오늘"
+  today: "오늘",
 };
 LocaleConfig.defaultLocale = "kr";
 
@@ -31,7 +28,7 @@ LocaleConfig.defaultLocale = "kr";
 const getToday = () => {
   const today = new Date();
   const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0"); // 월은 0부터 시작하므로 +1
+  const month = String(today.getMonth() + 1).padStart(2, "0");
   const day = String(today.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
@@ -42,31 +39,44 @@ export default function MainScreen() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  
+
   const fetchGoalProgress = async () => {
     try {
       const token = await AsyncStorage.getItem("access_token");
-      if (!token) throw new Error("JWT 토큰이 없습니다.");
+      if (!token) {
+        
+        return;
+      }
 
-      // user_no 기반으로 family_no 가져오기
+      // 사용자 정보 가져오기
       const userResponse = await fetch(`${API_URL}/users/me`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      if (!userResponse.ok) throw new Error("사용자 정보를 가져오는데 실패했습니다.");
+      if (!userResponse.ok) {
+        console.error("사용자 정보를 가져오는데 실패했습니다.");
+        return;
+      }
       const userData = await userResponse.json();
       const user_no = userData.user_no;
 
+      // 가족 정보 가져오기
       const familyResponse = await fetch(`${API_URL}/users/family/${user_no}`);
-      if (!familyResponse.ok) throw new Error("가족 정보를 가져오는데 실패했습니다.");
+      if (!familyResponse.ok) {
+        console.error("가족 정보를 가져오는데 실패했습니다.");
+        return;
+      }
       const familyData = await familyResponse.json();
       const family_no = familyData.family_no;
 
-      // family_no를 사용해 목표 진행 데이터 가져오기
+      // 목표 진행 데이터 가져오기
       const response = await fetch(`${API_URL}/schedule/${family_no}`);
-      if (!response.ok) throw new Error("목표 진행 데이터를 가져오는데 실패했습니다.");
+      if (!response.ok) {
+        console.error("목표 진행 데이터를 가져오는데 실패했습니다.");
+        return;
+      }
       const data = await response.json();
       setGoalProgress(data);
     } catch (error: any) {
@@ -78,38 +88,29 @@ export default function MainScreen() {
     const checkAuthentication = async () => {
       try {
         const token = await AsyncStorage.getItem("access_token");
-        console.log("Retrieved Token:", token); // 디버깅 로그 추가
-
         if (!token) {
           console.log("JWT 토큰이 없습니다. 로그인 화면으로 이동합니다.");
           router.replace("./users/login");
-        } else {
-          const response = await fetch(`${API_URL}/users/me`, {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          console.log("API Response Status:", response.status); // 디버깅 로그 추가
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            console.error("사용자 정보를 가져오는데 실패했습니다.", errorData); // 에러 상세 로그 추가
-
-            // 로그인 화면으로 이동
-            if (response.status === 401) {
-              console.log("토큰이 유효하지 않거나 만료되었습니다. 로그인 화면으로 이동합니다.");
-              router.replace("./users/login");
-            }
-
-            throw new Error("사용자 정보를 가져오는데 실패했습니다.");
-          }
-
-          const userData = await response.json();
-          console.log("User Data:", userData); // 디버깅 로그 추가
-          setIsAuthenticated(true);
+          return;
         }
+
+        const response = await fetch(`${API_URL}/users/me`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          console.error("사용자 인증에 실패했습니다.");
+          if (response.status === 401) {
+            console.log("토큰이 유효하지 않거나 만료되었습니다. 로그인 화면으로 이동합니다.");
+            router.replace("./users/login");
+          }
+          return;
+        }
+
+        setIsAuthenticated(true);
       } catch (error) {
         console.error("오류:", error);
       } finally {
@@ -122,31 +123,6 @@ export default function MainScreen() {
 
   useEffect(() => {
     fetchGoalProgress();
-  }, []);
-
-  useEffect(() => {
-    // 현재 접속 중인 사용자 user_no 확인 로그
-    const fetchUserNo = async () => {
-      try {
-        const token = await AsyncStorage.getItem("access_token"); // 저장된 JWT 토큰 가져오기
-        if (!token) throw new Error("JWT 토큰이 없습니다.");
-
-        const response = await fetch(`${API_URL}/users/me`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) throw new Error("사용자 정보를 가져오는데 실패했습니다.");
-        const data = await response.json();
-        console.log("현재 접속 중인 user_no:", data.user_no);
-      } catch (error: any) {
-        console.error("오류:", error.message);
-      }
-    };
-
-    fetchUserNo();
   }, []);
 
   const handleDayPress = (day: any) => {
@@ -171,7 +147,6 @@ export default function MainScreen() {
       {/* 달력 */}
       <View style={styles.calendarContainer}>
         <Calendar
-          // 상단 날짜 포맷: "2025년 4월" 형태로 표시
           monthFormat={"yyyy년 M월"}
           initialDate={selectedDate}
           onDayPress={handleDayPress}
@@ -187,22 +162,28 @@ export default function MainScreen() {
       {/* 목표 달성 현황 */}
       <View style={styles.goalsContainer}>
         <Text style={styles.sectionTitle}>목표 달성 현황</Text>
-        {goalProgress.map((goal, index) => (
-          <View key={index} style={styles.goalItem}>
-            <Text style={styles.goalContent}>{goal.scheduleContent}</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 5 }}>
-              <View style={styles.progressBarBackground}>
-                <View
-                  style={{
-                    ...styles.progressBarFill,
-                    width: `${(goal.completedCount / goal.totalCount) * 100}%`,
-                  }}
-                />
+        {goalProgress.length > 0 ? (
+          goalProgress.map((goal, index) => (
+            <View key={index} style={styles.goalItem}>
+              <Text style={styles.goalContent}>{goal.scheduleContent}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 5 }}>
+                <View style={styles.progressBarBackground}>
+                  <View
+                    style={{
+                      ...styles.progressBarFill,
+                      width: `${(goal.completedCount / goal.totalCount) * 100}%`,
+                    }}
+                  />
+                </View>
+                <Text style={styles.goalCount}>
+                  {goal.completedCount} of {goal.totalCount}
+                </Text>
               </View>
-              <Text style={styles.goalCount}>{goal.completedCount} of {goal.totalCount}</Text>
             </View>
-          </View>
-        ))}
+          ))
+        ) : (
+          <Text style={styles.noGoalsText}>현재 목표가 없습니다.</Text>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -267,9 +248,10 @@ const styles = StyleSheet.create({
     height: "100%",
     backgroundColor: "#76c7c0",
   },
-  buttonContainer: {
-    margin: 10,
-    borderRadius: 10,
-    overflow: "hidden",
+  noGoalsText: {
+    fontSize: 16,
+    color: "#888",
+    textAlign: "center",
+    marginTop: 10,
   },
 });

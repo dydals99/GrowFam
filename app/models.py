@@ -62,23 +62,47 @@ class CommunityComent(Base):
     user_no = Column(Integer, ForeignKey("tb_users.user_no", ondelete="CASCADE"), nullable=False)
 
 class Family(Base):
-    __tablename__ = "tb_famliy"
-    famliy_no = Column(Integer, primary_key=True, index=True)
-    user_no = Column(Integer, ForeignKey("tb_users.user_no"), nullable=False)
-    famliy_nickname = Column(String(20))
-    famliy_regist_at = Column(DateTime, server_default=func.now())
-    
-class FamilyMonthGoal(Base):
+    __tablename__ = "tb_family"
+
+    family_no = Column(Integer, primary_key=True, index=True)
+    user_no = Column(Integer, ForeignKey("tb_users.user_no", ondelete="CASCADE"), nullable=False)
+    family_nickname = Column(String(20), nullable=True)
+    family_regist_at = Column(TIMESTAMP, TIMESTAMP, server_default=func.now())
+
+    # Relationship
+    goals = relationship("FamilyMonthGoals", back_populates="family")
+    kids = relationship("KidInfo", back_populates="family")
+
+
+class FamilyMonthGoals(Base):
     __tablename__ = "tb_famliy_month_golas"
-    
+
     month_golas_no = Column(Integer, primary_key=True, index=True)
-    famliy_no = Column(Integer, ForeignKey("tb_famliy.famliy_no", ondelete="CASCADE"), nullable=False)
-    month_golas_contents = Column(String(255), nullable=False)
+    family_no = Column(Integer, ForeignKey("tb_family.family_no", ondelete="CASCADE"), nullable=False)
+    month_golas_contents = Column(String(255), nullable=True)
+
+    # Relationship
+    family = relationship("Family", back_populates="goals")
+
+
+class KidInfo(Base):
+    __tablename__ = "tb_kid_info"
+
+    kid_info_no = Column(Integer, primary_key=True, index=True)
+    family_no = Column(Integer, ForeignKey("tb_family.family_no", ondelete="CASCADE"), nullable=False)
+    kid_height = Column(String(20), nullable=False)
+    kid_weight = Column(String(20), nullable=False)
+    kid_gender = Column(String(1), nullable=False)
+    kid_birthday = Column(String(30), nullable=False)
+    kid_info_regist_at = Column(TIMESTAMP, TIMESTAMP, server_default=func.now())
+
+    # Relationship
+    family = relationship("Family", back_populates="kids")
 
 class Schedule(Base):
     __tablename__ = "tb_schedule"
     schedule_no = Column(Integer, primary_key=True, index=True)
-    famliy_no = Column(Integer, ForeignKey("tb_famliy.famliy_no"), nullable=False)
+    family_no = Column(Integer, ForeignKey("tb_family.family_no"), nullable=False)
     schedule_cotents = Column(String(255))  # 일정 내용
     schedule_date = Column(TIMESTAMP, server_default=func.now())
     schedule_total_count = Column(Integer, nullable=False)  # 총 체크 가능한 횟수 추가

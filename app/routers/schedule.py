@@ -2,11 +2,11 @@ from calendar import monthrange
 from typing import List
 from fastapi import APIRouter, Body, HTTPException, Depends
 from sqlalchemy.orm import Session
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 from pydantic import BaseModel
 from app.database import get_db 
 from app.models import Schedule, ScheduleCheck
-from app.models import FamilyMonthGoal
+from app.models import FamilyMonthGoals
 
 
 router = APIRouter(

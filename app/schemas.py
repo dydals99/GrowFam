@@ -2,6 +2,8 @@ from typing import Optional, List
 from pydantic import BaseModel
 from datetime import datetime
 
+
+# Community 관련 클래스
 class CommunityCreate(BaseModel):
     community_no: Optional[int] = None
     community_title: str
@@ -37,6 +39,26 @@ class CommunityLikeOut(BaseModel):
     class Config:
         from_attributes = True
 
+class CommunityComentBase(BaseModel):
+    coment_content: str
+    community_no: int
+    user_no: int
+
+class CommunityComentCreate(CommunityComentBase):
+    pass
+
+class CommunityComentUpdate(BaseModel):
+    coment_content: Optional[str] = None
+
+class CommunityComentOut(CommunityComentBase):
+    coment_no: int
+    coment_regist_at: datetime  # 필드 이름을 DB와 일치하도록 수정
+    user_nickname: str  # 사용자 닉네임 추가
+
+class Config:
+    from_attributes = True
+
+# Schedule 관련 클래스
 class ScheduleCreate(BaseModel):
     famliy_no: int
     schedule_cotents: str
@@ -60,25 +82,8 @@ class ScheduleCheckRead(BaseModel):
     class Config:
         from_attributes = True
 
-class CommunityComentBase(BaseModel):
-    coment_content: str
-    community_no: int
-    user_no: int
 
-class CommunityComentCreate(CommunityComentBase):
-    pass
-
-class CommunityComentUpdate(BaseModel):
-    coment_content: Optional[str] = None
-
-class CommunityComentOut(CommunityComentBase):
-    coment_no: int
-    coment_regist_at: datetime  # 필드 이름을 DB와 일치하도록 수정
-    user_nickname: str  # 사용자 닉네임 추가
-
-    class Config:
-        from_attributes = True
-
+# User 관련 클래스
 class UserCreate(BaseModel):
     user_name: str
     user_nickname: str
@@ -87,3 +92,47 @@ class UserCreate(BaseModel):
 
     class Config:
         from_attributes = True
+
+# Family 관련 클래스 
+class FamilyBase(BaseModel):
+    family_nickname: Optional[str]
+
+class FamilyCreate(FamilyBase):
+    user_no: int
+
+class Family(FamilyBase):
+    family_no: int
+    family_regist_at: datetime
+
+    class Config:
+        orm_mode = True
+
+
+class FamilyMonthGoalsBase(BaseModel):
+    month_golas_contents: str
+
+class FamilyMonthGoalsCreate(FamilyMonthGoalsBase):
+    family_no: int
+
+class FamilyMonthGoals(FamilyMonthGoalsBase):
+    month_golas_no: int
+
+    class Config:
+        orm_mode = True
+
+
+class KidInfoBase(BaseModel):
+    kid_height: str
+    kid_weight: str
+    kid_gender: str
+    kid_birthday: str
+
+class KidInfoCreate(KidInfoBase):
+    family_no: int
+
+class KidInfo(KidInfoBase):
+    kid_info_no: int
+    kid_info_regist_at: datetime
+
+    class Config:
+        orm_mode = True

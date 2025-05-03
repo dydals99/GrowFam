@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { API_URL } from '../../../constants/config';
@@ -9,9 +9,17 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const router = useRouter();
 
+  const handleKid = async () => {
+    router.push('../family/familyInfo'); // 올바른 경로로 수정
+  }
+  const handleFamily = async () => {
+    router.push('../family/familyRegist'); // 올바른 경로로 수정
+  }
+
+
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
+      Alert.alert('Error', '아이디 혹은 비밀번호가 틀렸습니다.');
       return;
     }
 
@@ -31,24 +39,8 @@ export default function LoginScreen() {
       const data = await response.json();
       await AsyncStorage.setItem('access_token', data.access_token); // JWT 토큰 저장
 
-      // user_no 가져오기
-      const userResponse = await fetch(`${API_URL}/users/me`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${data.access_token}`,
-        },
-      });
-
-      if (!userResponse.ok) {
-        Alert.alert('Error', 'Failed to fetch user information');
-        return;
-      }
-
-      const userData = await userResponse.json();
-      console.log('현재 접속 중인 user_no:', userData.user_no);
-
       Alert.alert('Success', 'Login successful!');
-      router.replace('./index'); // 올바른 경로로 수정
+      router.replace('./(tabs)/index'); // 올바른 경로로 수정
     } catch (error) {
       console.error('Failed to log in:', error);
       Alert.alert('Error', 'Failed to log in');
@@ -57,32 +49,56 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Glow Fam</Text>
-      <Text style={styles.title}>로그인</Text>
+      {/* 프로필 이미지 */}
+      <Image
+        style={styles.profileImage}
+      />
 
+      {/* 제목 */}
+      <Text style={styles.title}>Welcome GlowFam</Text>
+      <Text style={styles.subtitle}>Sign to continue</Text>
+
+      {/* 이메일 입력 */}
       <TextInput
         style={styles.input}
-        placeholder="이메일"
+        placeholder="EMAIL"
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
         autoCapitalize="none"
+        placeholderTextColor="#aaa"
       />
 
+      {/* 비밀번호 입력 */}
       <TextInput
         style={styles.input}
-        placeholder="비밀번호"
+        placeholder="PASSWORD"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
+        placeholderTextColor="#aaa"
       />
 
+      {/* 로그인 버튼 */}
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>로그인</Text>
+        <Text style={styles.buttonText}>LOGIN</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.link} onPress={() => router.push('./regist')}>
-        <Text style={styles.linkText}>회원가입</Text>
+      {/* 하단 링크 */}
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Don't have an account? </Text>
+        <TouchableOpacity onPress={() => router.push('./regist')}>
+          <Text style={styles.footerLink}>create a new account</Text>
+        </TouchableOpacity>
+      </View>
+      
+
+      <TouchableOpacity style={styles.button} onPress={handleKid}>
+        <Text style={styles.buttonText}>아이정보입력</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.button} onPress={handleFamily}>
+        <Text style={styles.buttonText}>가족정보입력</Text>
       </TouchableOpacity>
     </View>
   );
@@ -96,38 +112,59 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#fff',
   },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 20,
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
+    color: '#000',
+    marginBottom: 5,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#888',
+    marginBottom: 30,
   },
   input: {
     width: '100%',
     height: 50,
     borderWidth: 1,
     borderColor: '#ccc',
-    borderRadius: 5,
-    paddingHorizontal: 10,
+    borderRadius: 25,
+    paddingHorizontal: 15,
     marginBottom: 15,
+    backgroundColor: '#f9f9f9',
+    fontSize: 14,
   },
   button: {
     width: '100%',
     height: 50,
-    backgroundColor: '#007BFF',
+    backgroundColor: '#28a745',
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 5,
+    borderRadius: 25,
+    marginTop: 10,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  link: {
-    marginTop: 15,
+  footer: {
+    flexDirection: 'row',
+    marginTop: 20,
   },
-  linkText: {
-    color: '#007BFF',
+  footerText: {
     fontSize: 14,
+    color: '#888',
+  },
+  footerLink: {
+    fontSize: 14,
+    color: '#28a745',
+    fontWeight: 'bold',
   },
 });
