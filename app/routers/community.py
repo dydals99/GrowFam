@@ -65,10 +65,35 @@ def read_community(
     community_no: int,
     db: Session = Depends(database.get_db)
 ):
-    comm = db.query(models.Community).get(community_no)
+    # Community와 User를 조인하여 user_nickname 포함
+    comm = (
+        db.query(
+            models.Community.community_no,
+            models.Community.community_title,
+            models.Community.community_content,
+            models.Community.user_no,
+            models.Community.community_regist_at,
+            models.Community.like_count,
+            models.User.user_nickname.label("user_nickname")  # user_nickname 추가
+        )
+        .join(models.User, models.Community.user_no == models.User.user_no)
+        .filter(models.Community.community_no == community_no)
+        .first()
+    )
+
     if not comm:
         raise HTTPException(status_code=404, detail="Community not found")
-    return comm
+
+    # 반환 데이터 구성
+    return {
+        "community_no": comm.community_no,
+        "community_title": comm.community_title,
+        "community_content": comm.community_content,
+        "user_no": comm.user_no,
+        "user_nickname": comm.user_nickname,  # user_nickname 포함
+        "community_regist_at": comm.community_regist_at,
+        "like_count": comm.like_count,
+    }
 
 @router.put("/{community_no}", response_model=schemas.CommunityOut)
 def update_community(
