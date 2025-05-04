@@ -3,6 +3,7 @@
 # dependencies
 node_modules/
 constants/
+constants/config
 
 # Expo
 .expo/
