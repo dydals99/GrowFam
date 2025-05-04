@@ -97,8 +97,9 @@ class UserCreate(BaseModel):
 class FamilyBase(BaseModel):
     family_nickname: Optional[str]
 
-class FamilyCreate(FamilyBase):
-    user_no: int
+class FamilyCreate(BaseModel):
+    user_no: int  # user_no 필드 추가
+    family_nickname: Optional[str]
 
 class Family(FamilyBase):
     family_no: int

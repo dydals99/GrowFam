@@ -136,8 +136,18 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    print(f"User registered successfully: {new_user.user_no}")  # 디버깅 로그 추가
-    return {"success": True, "user_id": new_user.user_no}
+    # 가족 정보 생성
+    random_family_nickname = ''.join(random.choices(string.ascii_letters + string.digits, k=8))  # 랜덤 닉네임 생성
+    new_family = Family(
+        user_no=new_user.user_no,
+        family_nickname=random_family_nickname
+    )
+    db.add(new_family)
+    db.commit()
+    db.refresh(new_family)
+
+    print(f"User registered successfully: {new_user.user_no}, Family created: {new_family.family_no}")  # 디버깅 로그 추가
+    return {"success": True, "user_no": new_user.user_no, "family_no": new_family.family_no}
 
 @router.post("/login")
 def login(request: LoginRequest, db: Session = Depends(get_db)):
@@ -164,7 +174,7 @@ def get_current_user_info(current_user: dict = Depends(get_current_user)):
 @router.get("/family/{user_no}")
 def get_family_no(user_no: int, db: Session = Depends(get_db)):
     # tb_users와 tb_family를 조인하여 family_no를 가져옴
-    family_no = db.query(Family.famliy_no).join(User, User.user_no == Family.user_no).filter(User.user_no == user_no).scalar()
+    family_no = db.query(Family.family_no).join(User, User.user_no == Family.user_no).filter(User.user_no == user_no).scalar()
     if not family_no:
         raise HTTPException(status_code=404, detail="Family not found for the given user_no")
     return {"family_no": family_no}

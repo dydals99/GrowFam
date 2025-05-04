@@ -14,7 +14,7 @@ interface ScheduleType {
   lastCheckDate?: string; 
 }
 
-let famliy_no = 0;
+let family_no = 0;
 
 const fetchFamilyNo = async () => {
   try {
@@ -82,7 +82,7 @@ export default function ScheduleScreen() {
   // 가족 목표(이달의 목표)를 가져오는 함수
   const fetchFamilyGoal = async () => {
     try {
-      const response = await fetch(`${API_URL}/schedule/family-goal/${famliy_no}`);
+      const response = await fetch(`${API_URL}/schedule/family-goal/${family_no}`);
       if (!response.ok) throw new Error("가족 목표 조회에 실패했습니다.");
       const data = await response.json();
       setMonthGoal(data.month_golas_contents);
@@ -94,7 +94,7 @@ export default function ScheduleScreen() {
   // 등록된 일정을 가져오는 함수
   const fetchSchedules = async () => {
     try {
-      const response = await fetch(`${API_URL}/schedule/${famliy_no}`);
+      const response = await fetch(`${API_URL}/schedule/${family_no}`);
       if (!response.ok) throw new Error("일정 조회에 실패했습니다.");
       const data = await response.json();
 
@@ -137,7 +137,7 @@ export default function ScheduleScreen() {
       const initializeData = async () => {
         const familyNo = await fetchFamilyNo();
         if (familyNo) {
-          famliy_no = familyNo;
+          family_no = familyNo;
           fetchFamilyGoal();
           fetchSchedules();
         }
@@ -151,7 +151,7 @@ export default function ScheduleScreen() {
     const remainingDays = getRemainingDaysInMonth();
 
     const payload = {
-      famliy_no: famliy_no,
+      family_no: family_no,
       schedule_cotents: scheduleContent,
       schedule_date: scheduleDate,
       schedule_check_count: remainingDays,

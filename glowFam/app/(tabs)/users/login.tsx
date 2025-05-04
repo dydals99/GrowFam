@@ -12,9 +12,6 @@ export default function LoginScreen() {
   const handleKid = async () => {
     router.push('../family/familyInfo'); // 올바른 경로로 수정
   }
-  const handleFamily = async () => {
-    router.push('../family/familyRegist'); // 올바른 경로로 수정
-  }
 
 
   const handleLogin = async () => {
@@ -95,10 +92,6 @@ export default function LoginScreen() {
 
       <TouchableOpacity style={styles.button} onPress={handleKid}>
         <Text style={styles.buttonText}>아이정보입력</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.button} onPress={handleFamily}>
-        <Text style={styles.buttonText}>가족정보입력</Text>
       </TouchableOpacity>
     </View>
   );

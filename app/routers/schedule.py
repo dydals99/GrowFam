@@ -14,17 +14,17 @@ router = APIRouter(
     tags=["schedule"])
 
 class ScheduleCreate(BaseModel):
-    famliy_no: int
+    family_no: int
     schedule_cotents: str
     schedule_date: datetime
     schedule_check_count: int
 
-@router.get("/{famliy_no}", response_model=List[dict])
-def get_schedules(famliy_no: int, db: Session = Depends(get_db)):
+@router.get("/{family_no}", response_model=List[dict])
+def get_schedules(family_no: int, db: Session = Depends(get_db)):
     schedules = (
         db.query(Schedule, ScheduleCheck)
         .join(ScheduleCheck, Schedule.schedule_no == ScheduleCheck.schedule_no)
-        .filter(Schedule.famliy_no == famliy_no)
+        .filter(Schedule.family_no == family_no)
         .all()
     )
 
@@ -53,7 +53,7 @@ def create_schedule(schedule_data: ScheduleCreate, db: Session = Depends(get_db)
 
         # tb_schedule에 데이터 삽입
         new_schedule = Schedule(
-            famliy_no=schedule_data.famliy_no,
+            family_no=schedule_data.family_no,
             schedule_cotents=schedule_data.schedule_cotents,
             schedule_date=schedule_data.schedule_date,
             schedule_total_count=remaining_days  # 총 체크 가능한 횟수 저장
@@ -80,9 +80,9 @@ def create_schedule(schedule_data: ScheduleCreate, db: Session = Depends(get_db)
         db.rollback()
         raise HTTPException(status_code=500, detail=f"일정 등록 실패: {str(e)}")
 
-@router.get("/family-goal/{famliy_no}", response_model=dict)
-def get_family_goal(famliy_no: int, db: Session = Depends(get_db)):
-    family_goal = db.query(FamilyMonthGoal).filter(FamilyMonthGoal.famliy_no == famliy_no).first()
+@router.get("/family-goal/{family_no}", response_model=dict)
+def get_family_goal(family_no: int, db: Session = Depends(get_db)):
+    family_goal = db.query(FamilyMonthGoals).filter(FamilyMonthGoals.family_no == family_no).first()
     if not family_goal:
         raise HTTPException(status_code=404, detail="해당 가족의 목표가 존재하지 않습니다.")
     return {"month_golas_contents": family_goal.month_golas_contents}

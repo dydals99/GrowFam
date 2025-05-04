@@ -14,13 +14,13 @@ def get_family_progress(db: Session = Depends(get_db)):
     try:
         results = (
             db.query(
-                Family.famliy_nickname,
+                Family.family_nickname,
                 func.sum(Schedule.schedule_total_count).label("total_missions"),
                 func.sum(ScheduleCheck.schedule_check_count).label("completed_missions")
             )
-            .join(Schedule, Family.famliy_no == Schedule.famliy_no)
+            .join(Schedule, Family.family_no == Schedule.family_no)
             .join(ScheduleCheck, Schedule.schedule_no == ScheduleCheck.schedule_no)
-            .group_by(Family.famliy_nickname)
+            .group_by(Family.family_nickname)
             .all()
         )
 

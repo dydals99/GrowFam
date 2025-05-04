@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import DropDownPicker from 'react-native-dropdown-picker';
-import { useRouter } from 'expo-router';
 import { API_URL } from '../../../constants/config';
 
 
 export default function FamilyInfoScreen() {
+  const params = useLocalSearchParams(); // 최상위 레벨에서 호출
+  const family_no = params.family_no; // family_no 가져오기
+  const router = useRouter();
+  
+  const [familyGoal, setFamilyGoal] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
-  const router = useRouter();
   const [gender, setGender] = useState('');
   const [height, setHeight] = useState('');
   const [weight, setWeight] = useState('');
@@ -18,32 +22,40 @@ export default function FamilyInfoScreen() {
     { label: '남자', value: 'M' },
     { label: '여자', value: 'F' },
   ]);
+  const [isTooltipVisible, setTooltipVisible] = useState(false);
+  
 
-  const handleNext = async () => {
-    if (!birthDate || !gender || !height || !weight) {
+  const toggleTooltip = () => {
+    setTooltipVisible(!isTooltipVisible);
+  };
+
+  const handleComplete = async () => {
+    if (!familyGoal || !birthDate || !gender || !height || !weight) {
       Alert.alert('Error', '모든 필드를 입력해주세요.');
       return;
     }
 
     try {
-      // 자녀 정보 저장 
-      const response = await fetch(`${API_URL}/family/kid`, {
+      const response = await fetch(`${API_URL}/family/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          family_no: 1, // family_no는 이전 단계에서 저장된 값
-          kid_height: height,
-          kid_weight: weight,
-          kid_gender: gender,
-          kid_birthday: birthDate,
+          goal: { family_no: family_no, month_golas_contents: familyGoal },
+          kid: {
+            family_no: family_no,
+            kid_height: height,
+            kid_weight: weight,
+            kid_gender: gender,
+            kid_birthday: birthDate,
+          },
         }),
       });
 
       if (!response.ok) {
-        throw new Error('자녀 정보 저장 실패');
+        throw new Error('데이터 저장 실패');
       }
 
-      Alert.alert('Success', '자녀 정보가 저장되었습니다.');
+      Alert.alert('Success', '가족 정보와 자녀 정보가 저장되었습니다.');
       router.replace('../users/login'); // 로그인 화면으로 이동
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.');
@@ -52,7 +64,30 @@ export default function FamilyInfoScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>자녀 정보 입력 페이지</Text>
+      <Text style={styles.title}>가족 및 자녀 정보 입력</Text>
+
+      {/* 이달의 목표 입력 */}
+      <View style={styles.inputWithTooltip}>
+        <TextInput
+          style={[styles.input, styles.inputWithIcon]}
+          placeholder="이달의 목표를 입력하세요."
+          value={familyGoal}
+          onChangeText={setFamilyGoal}
+          placeholderTextColor="#aaa"
+        />
+        <TouchableOpacity style={styles.tooltipIconInside} onPress={toggleTooltip}>
+          <Text style={styles.tooltipIconText}>?</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* 툴팁 텍스트 */}
+      {isTooltipVisible && (
+        <View style={styles.tooltip}>
+          <Text style={styles.tooltipText}>
+            이달의 목표 예시 : 1kg 감량하기, 3kg 증량하기 등 뚜렷하게 바꾸고자 하는 목표!
+          </Text>
+        </View>
+      )}
 
       {/* 생년월일 선택 */}
       <TouchableOpacity style={styles.input} onPress={() => setDatePickerVisibility(true)}>
@@ -107,13 +142,9 @@ export default function FamilyInfoScreen() {
         placeholderTextColor="#aaa"
       />
 
-      {/* 다음 버튼 */}
-      <TouchableOpacity
-        style={[styles.button, (!birthDate || !gender || !height || !weight) && styles.disabledButton]}
-        onPress={handleNext}
-        disabled={!birthDate || !gender || !height || !weight}
-      >
-        <Text style={styles.buttonText}>다음</Text>
+      {/* 완료 버튼 */}
+      <TouchableOpacity style={styles.button} onPress={handleComplete}>
+        <Text style={styles.buttonText}>완료</Text>
       </TouchableOpacity>
     </View>
   );
@@ -125,7 +156,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#FFEFF1', // 연한 분홍색 배경
+    backgroundColor: '#FFEFF1',
   },
   title: {
     fontSize: 18,
@@ -141,8 +172,42 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     paddingHorizontal: 15,
     marginBottom: 15,
-    justifyContent: 'center',
     backgroundColor: '#fff',
+    justifyContent: 'center', // 수직 가운데 정렬
+  },
+  inputWithTooltip: {
+    width: '100%',
+    position: 'relative',
+  },
+  inputWithIcon: {
+    paddingRight: 40, // 아이콘 공간 확보
+  },
+  tooltipIconInside: {
+    position: 'absolute',
+    right: 15,
+    top: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tooltipIconText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  tooltip: {
+    marginTop: 5,
+    backgroundColor: '#000',
+    padding: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  tooltipText: {
+    color: '#fff',
+    fontSize: 14,
   },
   inputText: {
     fontSize: 14,
@@ -168,7 +233,7 @@ const styles = StyleSheet.create({
   button: {
     width: '100%',
     height: 50,
-    backgroundColor: '#F28B8C', // 연한 빨간색 버튼
+    backgroundColor: '#F28B8C',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 25,
@@ -178,8 +243,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  disabledButton: {
-    backgroundColor: '#F5C6C7', // 비활성화된 버튼 색상
   },
 });

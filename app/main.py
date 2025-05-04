@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 import asyncio
+from dotenv import load_dotenv
 from fastapi.staticfiles import StaticFiles
 from app.database import engine, Base
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,9 +11,12 @@ from app.routers.community import router as community_router
 from app.routers.schedule import router as schedule_router
 from app.routers.graph import router as graph_router
 from app.routers.users import router as users_router
+from app.routers.family import router as family_router
 
 from app.routers.community_coment import router as community_coment_router
 import os
+
+load_dotenv()
 
 async def lifespan(app: FastAPI):
     print("Starting application...")
@@ -55,6 +59,7 @@ app.include_router(schedule_router)
 app.include_router(graph_router)
 app.include_router(community_coment_router)
 app.include_router(users_router)
+app.include_router(family_router)
 
 app.mount("/static", StaticFiles(directory=UPLOAD_DIR), name="static")
 

@@ -67,7 +67,7 @@ class Family(Base):
     family_no = Column(Integer, primary_key=True, index=True)
     user_no = Column(Integer, ForeignKey("tb_users.user_no", ondelete="CASCADE"), nullable=False)
     family_nickname = Column(String(20), nullable=True)
-    family_regist_at = Column(TIMESTAMP, TIMESTAMP, server_default=func.now())
+    family_regist_at = Column(TIMESTAMP, server_default=func.now())
 
     # Relationship
     goals = relationship("FamilyMonthGoals", back_populates="family")
@@ -94,7 +94,7 @@ class KidInfo(Base):
     kid_weight = Column(String(20), nullable=False)
     kid_gender = Column(String(1), nullable=False)
     kid_birthday = Column(String(30), nullable=False)
-    kid_info_regist_at = Column(TIMESTAMP, TIMESTAMP, server_default=func.now())
+    kid_info_regist_at = Column(TIMESTAMP, server_default=func.now())
 
     # Relationship
     family = relationship("Family", back_populates="kids")

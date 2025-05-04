@@ -22,7 +22,7 @@ export default function RegisterScreen() {
       Alert.alert('Error', '이메일 인증이 필요합니다.');
       return;
     }
-
+  
     try {
       const response = await fetch(`${API_URL}/users/register`, {
         method: 'POST',
@@ -35,17 +35,19 @@ export default function RegisterScreen() {
           verification_code: verificationCode,
         }),
       });
-
-      const data = await response.json();
-      if (data.success) {
-        Alert.alert('회원가입 성공, 세부 정보 입력 페이지로 이동합니다.');
-        router.replace('../family/familyRegist');
-      } else {
-        Alert.alert('Error', data.message || '회원가입 실패.');
+  
+      if (!response.ok) {
+        throw new Error('회원가입 실패');
       }
+  
+      const data = await response.json(); // 서버에서 반환된 user_no와 family_no
+      const { user_no, family_no } = data;
+  
+      // 회원가입 성공 시 familyInfo로 family_no 전달
+      router.replace(`/family/familyInfo?family_no=${family_no}`);
     } catch (error) {
-      console.error('Registration error:', error);
-      Alert.alert('Error', '회원가입 중 오류가 발생했습니다.');
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+      Alert.alert('Error', errorMessage);
     }
   };
 
