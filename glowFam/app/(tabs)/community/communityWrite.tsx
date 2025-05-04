@@ -1,28 +1,70 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
-import { useRouter} from 'expo-router';
-import { API_URL } from '../../../constants/config'
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
+import { API_URL } from '../../../constants/config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function CommunityWrite() {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  // const [user_no, setUser_no] = useState('');
+  const [userNo, setUserNo] = useState<number | null>(null);
+
+  // 사용자 정보 가져오기
+  useEffect(() => {
+    const fetchUserNo = async () => {
+      try {
+        const token = await AsyncStorage.getItem('access_token'); 
+        if (!token) {
+          Alert.alert('로그인이 필요합니다.');
+          router.replace('/users/login'); 
+          return;
+        }
+
+        // 사용자 정보 요청
+        const response = await fetch(`${API_URL}/users/me`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          console.error('사용자 정보를 가져오는데 실패했습니다.');
+          Alert.alert('사용자 정보를 가져오는 중 오류가 발생했습니다.');
+          return;
+        }
+
+        const userData = await response.json();
+        setUserNo(userData.user_no);
+      } catch (error) {
+        console.error('오류 발생:', error);
+        Alert.alert('로그인 정보를 가져오는 중 오류가 발생했습니다.');
+      }
+    };
+
+    fetchUserNo();
+  }, []);
 
   const handleCancel = () => {
-    router.push('./community'); 
+    router.push('./community');
   };
 
   const handleSubmit = async () => {
     if (!title || !content) {
-      alert('제목과 내용을 입력해주세요.');
+      Alert.alert('Error', '제목과 내용을 입력해주세요.');
+      return;
+    }
+  
+    if (!userNo) {
+      Alert.alert('Error', '로그인이 필요합니다.');
       return;
     }
   
     const postData = {
-      community_title: title, // 서버에서 기대하는 필드 이름으로 변경
-      community_content: content, // 서버에서 기대하는 필드 이름으로 변경
-      user_no: 1, 
+      community_title: title,
+      community_content: content,
+      user_no: userNo,
     };
   
     try {
@@ -37,13 +79,17 @@ export default function CommunityWrite() {
       if (!res.ok) {
         const errText = await res.text();
         console.error('글 등록 실패:', res.status, errText);
-        alert('글 등록에 실패했습니다.');
+        Alert.alert('글 등록에 실패했습니다.');
         return;
       }
   
       const data = await res.json();
       console.log('등록 성공:', data);
-      alert('글이 등록되었습니다.');
+      Alert.alert('글이 등록되었습니다.');
+  
+      // 제목과 내용 초기화
+      setTitle('');
+      setContent('');
   
       router.replace({
         pathname: '/community/communityDetail',
@@ -51,7 +97,7 @@ export default function CommunityWrite() {
       });
     } catch (error) {
       console.error('네트워크 오류:', error);
-      alert('네트워크 오류가 발생했습니다.');
+      Alert.alert('네트워크 오류가 발생했습니다.');
     }
   };
 
@@ -80,7 +126,7 @@ export default function CommunityWrite() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 70, paddingLeft:20, paddingRight:20, backgroundColor: '#fff' },
+  container: { flex: 1, paddingTop: 70, paddingLeft: 20, paddingRight: 20, backgroundColor: '#fff' },
   title: { fontSize: 20, fontWeight: 'bold', marginBottom: 16 },
   input: {
     borderWidth: 1,

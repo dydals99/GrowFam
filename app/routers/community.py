@@ -8,16 +8,42 @@ router = APIRouter(
     prefix="/communities",
     tags=["communities"]
 )
-
 @router.get("/", response_model=List[schemas.CommunityOut])
 def read_communities(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(database.get_db)
 ):
-    posts = db.query(models.Community).offset(skip).limit(limit).all()
-    return posts
+    posts = (
+        db.query(
+            models.Community.community_no,
+            models.Community.community_title,
+            models.Community.community_content,
+            models.Community.user_no,
+            models.Community.community_regist_at,
+            models.Community.like_count,
+            models.User.user_nickname.label("user_nickname")  # user_nickname 추가
+        )
+        .join(models.User, models.Community.user_no == models.User.user_no)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
+    print("Fetched posts:", posts)  # 디버깅용 출력
+
+    return [
+        {
+            "community_no": post.community_no,
+            "community_title": post.community_title,
+            "community_content": post.community_content,
+            "user_no": post.user_no,
+            "user_nickname": post.user_nickname,  # user_nickname 포함
+            "community_regist_at": post.community_regist_at,
+            "like_count": post.like_count,
+        }
+        for post in posts
+    ]
 @router.post("/", response_model=schemas.CommunityOut, status_code=status.HTTP_201_CREATED)
 def create_community(
     community: schemas.CommunityCreate,

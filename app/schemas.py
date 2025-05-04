@@ -23,6 +23,7 @@ class CommunityOut(BaseModel):
     user_no: int
     community_regist_at: datetime
     like_count: int
+    user_nickname: str
     
     class Config:
         from_attributes = True

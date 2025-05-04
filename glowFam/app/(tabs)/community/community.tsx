@@ -10,9 +10,9 @@ interface Post {
   community_title: string;
   community_content: string;
   user_no: number;
+  user_nickname: string;
   community_regist_at: string;
   like_count : number;
-
 }
 
 export default function Community() {
@@ -104,10 +104,12 @@ export default function Community() {
     >
       <View style={{ flex: 1 }}>
         <Text style={styles.postTitle}>{item.community_title}</Text>
-        <Text style={styles.postAuthor}>작성자 : {item.user_no}</Text>
+        <Text style={styles.postAuthor}>작성자 : {item.user_nickname || "알 수 없음"}</Text>
       </View>
       <View style={styles.summaryBox}>
-        <Text style={styles.summaryText}>❤️ {item.like_count}   |   💬 {comentCounts[item.community_no] || 0}</Text>
+        <Text style={styles.summaryText}>
+          ❤️ {item.like_count}   |   💬 {comentCounts[item.community_no] || 0}
+        </Text>
       </View>
     </TouchableOpacity>
   );

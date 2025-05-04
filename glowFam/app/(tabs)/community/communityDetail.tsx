@@ -2,18 +2,23 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TouchableWithoutFeedback, Keyboard, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { API_URL } from '../../../constants/config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import dayjs from 'dayjs';
 
 type Post = {
   community_no: number;
   community_title: string;
   community_content: string;
-  user_no: number;
   community_regist_at: string;
+  user_no: number;
+  user_nickname: string;
 };
 
-const mockUser = {
-  user_no: 1,
+type Coment = {
+  coment_no: number;
+  coment_content: string;
+  user_nickname: string;
+  coment_regist_at: string;
 };
 
 export default function CommunityDetail() {
@@ -24,17 +29,47 @@ export default function CommunityDetail() {
   const [hasLiked, setHasLiked] = useState<boolean>(false);
   const [showMoreMenu, setShowMoreMenu] = useState<boolean>(false);
   const [comentCounts, setComentCounts] = useState<number>(0);
-  type Coment = {
-    coment_no: number;
-    coment_content: string;
-    user_nickname: string;
-    coment_regist_at: string;
-  };
-  
+  const [userNo, setUserNo] = useState<number | null>(null); // 로그인한 사용자의 user_no
   const [coments, setComents] = useState<Coment[]>([]);
   const [loadingComents, setLoadingComents] = useState<boolean>(false);
 
   const post: Post | undefined = params.post ? JSON.parse(params.post) : undefined;
+
+  // 사용자 정보 가져오기
+  useEffect(() => {
+    const fetchUserNo = async () => {
+      try {
+        const token = await AsyncStorage.getItem('access_token'); // JWT 토큰 가져오기
+        if (!token) {
+          Alert.alert('로그인이 필요합니다.');
+          router.replace('/users/login'); // 로그인 화면으로 이동
+          return;
+        }
+
+        // 사용자 정보 요청
+        const response = await fetch(`${API_URL}/users/me`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          console.error('사용자 정보를 가져오는데 실패했습니다.');
+          Alert.alert('사용자 정보를 가져오는 중 오류가 발생했습니다.');
+          return;
+        }
+
+        const userData = await response.json();
+        setUserNo(userData.user_no); // user_no 설정
+      } catch (error) {
+        console.error('오류 발생:', error);
+        Alert.alert('로그인 정보를 가져오는 중 오류가 발생했습니다.');
+      }
+    };
+
+    fetchUserNo();
+  }, []);
 
   useEffect(() => {
     if (post) {
@@ -43,16 +78,10 @@ export default function CommunityDetail() {
     }
   }, [post]);
 
-  useEffect(() => {
-    if (!post) {
-      //console.error('post 데이터가 전달되지 않았습니다. params:', params);
-    }
-  }, [params]);
-
   const fetchLikeStatus = async () => {
     try {
       const res = await fetch(
-        `${API_URL}/community-likes/status?community_no=${post?.community_no}&user_no=${mockUser.user_no}`
+        `${API_URL}/community-likes/status?community_no=${post?.community_no}&user_no=${userNo}`
       );
       const data = await res.json();
       setHasLiked(data.liked);
@@ -71,7 +100,6 @@ export default function CommunityDetail() {
         throw new Error('잘못된 요청');
       }
       const data = await res.json();
-      //console.log('Fetched coment count:', data);
       if (data && data.counts) {
         const count = data.counts[post.community_no] || 0; // 댓글이 없으면 0으로 설정
         setComentCounts(count);
@@ -83,11 +111,10 @@ export default function CommunityDetail() {
     }
   };
 
-  // 좋아요 토글
   const toggleLike = async () => {
     try {
       const res = await fetch(
-        `${API_URL}/community-likes/toggle/${post?.community_no}/like?user_no=${mockUser.user_no}`,
+        `${API_URL}/community-likes/toggle/${post?.community_no}/like?user_no=${userNo}`,
         { method: 'POST' }
       );
       const data = await res.json();
@@ -123,19 +150,17 @@ export default function CommunityDetail() {
     }
   };
 
-  // 삭제하기
   const handleDelete = async () => {
     setShowMoreMenu(false);
     try {
       const res = await fetch(`${API_URL}/communities/${post?.community_no}`, {
         method: 'DELETE',
       });
-  
+
       if (res.status === 204) {
         Alert.alert('알림', '게시글이 삭제되었습니다.');
         router.push('./community');
       } else {
-        // 204가 아닌 경우 에러 메시지 처리
         const errorData = await res.json();
         console.error('삭제 실패:', errorData);
         Alert.alert('오류', '게시글 삭제에 실패했습니다.');
@@ -146,13 +171,11 @@ export default function CommunityDetail() {
     }
   };
 
-  // 외부 터치 시 (메뉴 닫힘)
   const handleOutsidePress = () => {
     setShowMoreMenu(false);
     Keyboard.dismiss();
   };
 
-  // 목록으로 이동
   const handleGoList = () => {
     router.push('./community');
   };
@@ -213,7 +236,7 @@ export default function CommunityDetail() {
         </View>
 
         {/* 점 세개 클릭 → 수정/삭제 메뉴 */}
-        {showMoreMenu && (
+        {showMoreMenu && userNo === post?.user_no && ( 
           <View style={styles.moreMenu}>
             <TouchableOpacity style={styles.menuItem} onPress={handleEdit}>
               <Text style={styles.menuItemText}>수정하기</Text>
@@ -226,7 +249,7 @@ export default function CommunityDetail() {
 
         <ScrollView contentContainerStyle={styles.contentContainer}>
           <Text style={styles.title}>{post.community_title}</Text>
-          <Text style={styles.author}>작성자 : {post.user_no}</Text>
+          <Text style={styles.author}>작성자 : {post.user_nickname}</Text>
           <Text style={styles.date}>
             작성일 :{" "}
             {post.community_regist_at || dayjs(post.community_regist_at).isValid()
@@ -255,7 +278,7 @@ export default function CommunityDetail() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.iconButton, { marginLeft: 25 }]}
-              onPress={() => router.push(`/community/communityComent?communityNo=${post.community_no}&userNo=${mockUser.user_no}`)}
+              onPress={() => router.push(`/community/communityComent?communityNo=${post.community_no}&userNo=${userNo}`)}
             >
               <Text style={styles.iconText}>💬 {comentCounts || 0}</Text>
             </TouchableOpacity>
