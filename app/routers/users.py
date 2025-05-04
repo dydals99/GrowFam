@@ -137,7 +137,10 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
 
     # 가족 정보 생성
-    random_family_nickname = ''.join(random.choices(string.ascii_letters + string.digits, k=8))  # 랜덤 닉네임 생성
+    adjectives = ["똑똑한", "용감한", "친절한", "행복한", "사려깊은", "밝은", "따뜻한", "재미있는"]
+    animals = ["돌고래네", "호랑이네", "사자네", "토끼네", "코끼리네", "여우네", "펭귄네", "부엉이네"]
+
+    random_family_nickname = f"{random.choice(adjectives)} {random.choice(animals)}"  # 랜덤 닉네임 생성
     new_family = Family(
         user_no=new_user.user_no,
         family_nickname=random_family_nickname
