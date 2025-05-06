@@ -2,8 +2,8 @@
 
 # dependencies
 node_modules/
-constants/
-constants/config
+
+
 
 # Expo
 .expo/
@@ -82,3 +82,4 @@ yarn-error.*
 # @end expo-cli
 
 .env
+constants
