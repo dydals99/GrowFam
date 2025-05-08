@@ -62,6 +62,7 @@ app.include_router(community_coment_router)
 app.include_router(users_router)
 app.include_router(family_router)
 
-app.mount("/static", StaticFiles(directory=UPLOAD_DIR), name="static")
+# 정적 파일 제공 설정
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 

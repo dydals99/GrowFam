@@ -191,11 +191,10 @@ export default function ScheduleScreen() {
       const response = await fetch(`${API_URL}/schedule/check/${scheduleNo}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ increment: 1 }), // increment 값을 1로 고정
+        body: JSON.stringify({ increment: 1 }),
       });
       if (!response.ok) throw new Error("체크 업데이트에 실패했습니다.");
       const data = await response.json();
-      // data: { schedule_no: number, schedule_check_count: newCount }
       return data.schedule_check_count;
     } catch (error: any) {
       Alert.alert("오류", error.message);
@@ -295,7 +294,7 @@ export default function ScheduleScreen() {
                 등록된 일정: {schedule.scheduleContent}
               </Text>
               <Text style={styles.registeredText}>
-                시작일: {dateRange} / 미션 현황: {schedule.completedCount}/{schedule.totalCount}
+                [{dateRange}] 미션 현황: {schedule.completedCount}/{schedule.totalCount}
               </Text>
               {renderCheckButton(schedule)}
             </View>
@@ -349,6 +348,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "bold",
     marginBottom: 16,
+    textAlign: 'center',
   },
   goalSection: {
     backgroundColor: "#fff",
@@ -365,10 +365,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 8,
+    textAlign: 'center',
   },
   goalText: {
     fontSize: 16,
     color: "#333",
+    textAlign: 'center',
   },
   addButton: {
     position: "absolute",
@@ -409,6 +411,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
     marginBottom: 4,
+    textAlign: 'center',
   },
   checkButton: {
     alignSelf: "flex-end",

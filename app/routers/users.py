@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, File, UploadFile
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User, Family
@@ -12,6 +12,7 @@ import smtplib
 from email.mime.text import MIMEText
 from app.utils import create_access_token, get_current_user
 from datetime import timedelta
+import shutil
 
 # Token expiration time in minutes
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -70,6 +71,7 @@ def send_email(to_email: str, code: str):
 
 @router.post("/check-nickname")
 def check_nickname(request: NicknameRequest, db: Session = Depends(get_db)):
+    
     existing_user = db.query(User).filter(User.user_nickname == request.nickname).first()
     if (existing_user):
         return {"isValid": False}
@@ -169,10 +171,19 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.get("/me")
-def get_current_user_info(current_user: dict = Depends(get_current_user)):
+def get_current_user_info(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     # 디버깅 로그 추가
+    
     print(f"Decoded current user: {current_user}")
-    return {"user_no": current_user.get("user_no"), "email": current_user.get("sub")}
+
+    # user_no를 사용하여 user_nickname 가져오기
+    user_no = current_user.get("user_no")
+    user = db.query(User).filter(User.user_no == user_no).first()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {"user_no": user.user_no, "email": current_user.get("sub"), "nickname": user.user_nickname, "username":user.user_name, "profileImage" : user.user_profile}
 
 @router.get("/family/{user_no}")
 def get_family_no(user_no: int, db: Session = Depends(get_db)):
@@ -181,5 +192,26 @@ def get_family_no(user_no: int, db: Session = Depends(get_db)):
     if not family_no:
         raise HTTPException(status_code=404, detail="Family not found for the given user_no")
     return {"family_no": family_no}
+
+@router.post("/update-profile-image")
+def update_profile_image(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db), file: UploadFile = File(...)):
+    user_no = current_user.get("user_no")
+    user = db.query(User).filter(User.user_no == user_no).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # 파일 저장 경로 설정
+    file_location = f"static/uploaded_user_profile/{user_no}_{file.filename}"
+    with open(file_location, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # DB에 프로필 이미지 경로 업데이트
+    user.user_profile = file_location
+    db.commit()
+
+    return {"success": True, "message": "Profile image updated successfully", "profileImage": file_location}
+
+
 
 

@@ -10,8 +10,7 @@ const HeaderNav: React.FC = () => {
        {/* 프로필 이미지 */}
        <TouchableOpacity
         style={styles.profileSection}
-        onPress={() => router.push("../users/userInfo")} // 정보 관리 페이지로 이동
-      >
+        onPress={() => router.push("../users/userProfile")}> 
         <Image
           source={require("../../../assets/images/다운로드.jpg")} // 기본 프로필 이미지 설정
           style={styles.profileImage}

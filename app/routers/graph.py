@@ -30,7 +30,7 @@ def get_family_progress(db: Session = Depends(get_db)):
             progress = (completed_missions / total_missions * 100) if total_missions > 0 else 0
             family_progress.append({
                 "family_nickname": family_nickname,
-                "progress": round(progress, 2)  
+                "progress": round(progress, 1)  
             })
 
         # 퍼센트 기준으로 내림차순 정렬

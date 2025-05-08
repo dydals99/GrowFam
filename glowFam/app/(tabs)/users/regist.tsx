@@ -43,8 +43,8 @@ export default function RegisterScreen() {
       const data = await response.json(); // 서버에서 반환된 user_no와 family_no
       const { user_no, family_no } = data;
   
-      // 회원가입 성공 시 familyInfo로 family_no 전달
-      router.replace(`/family/familyInfo?family_no=${family_no}`);
+      // 회원가입 성공 시 familyRegist로 family_no 전달
+      router.replace(`/family/familyRegist?family_no=${family_no}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
       Alert.alert('Error', errorMessage);
@@ -62,14 +62,14 @@ export default function RegisterScreen() {
       const data = await response.json();
       if (data.isValid) {
         setIsNicknameValid(true);
-        Alert.alert('Success', '사용 가능한 닉네임입니다.');
+        Alert.alert('사용 가능한 닉네임입니다.');
       } else {
         setIsNicknameValid(false);
-        Alert.alert('Error', '이미 사용 중인 닉네임입니다.');
+        Alert.alert('이미 사용 중인 닉네임입니다.');
       }
     } catch (error) {
       console.error('Nickname check error:', error);
-      Alert.alert('Error', '닉네임 확인 중 오류가 발생했습니다.');
+      Alert.alert('닉네임 확인 중 오류가 발생했습니다.');
     }
   };
 
@@ -83,13 +83,13 @@ export default function RegisterScreen() {
 
       const data = await response.json();
       if (data.success) {
-        Alert.alert('Success', '인증 이메일이 전송되었습니다.');
+        Alert.alert('인증 이메일이 전송되었습니다.');
       } else {
-        Alert.alert('Error', '이메일 전송 실패.');
+        Alert.alert('이메일 전송 실패.');
       }
     } catch (error) {
-      console.error('Email verification error:', error);
-      Alert.alert('Error', '이메일 전송 중 오류가 발생했습니다.');
+      console.log('Email verification error:', error);
+      Alert.alert('이메일 전송 중 오류가 발생했습니다.');
     }
   };
 
@@ -104,13 +104,13 @@ export default function RegisterScreen() {
       const data = await response.json();
       if (data.success) {
         setIsEmailVerified(true);
-        Alert.alert('Success', '이메일 인증 성공!');
+        Alert.alert('이메일 인증 성공!');
       } else {
-        Alert.alert('Error', '인증 코드가 올바르지 않습니다.');
+        Alert.alert('인증 코드가 올바르지 않습니다.');
       }
     } catch (error) {
-      console.error('Email code verification error:', error);
-      Alert.alert('Error', '이메일 인증 중 오류가 발생했습니다.');
+      console.log('Email code verification error:', error);
+      Alert.alert('이메일 인증 중 오류가 발생했습니다.');
     }
   };
 

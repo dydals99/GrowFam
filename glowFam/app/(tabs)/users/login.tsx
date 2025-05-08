@@ -37,10 +37,10 @@ export default function LoginScreen() {
       await AsyncStorage.setItem('access_token', data.access_token); // JWT 토큰 저장
 
       Alert.alert('Success', 'Login successful!');
-      router.replace('./(tabs)/index'); // 올바른 경로로 수정
+      router.replace('/'); // 올바른 경로로 수정
     } catch (error) {
-      console.error('Failed to log in:', error);
-      Alert.alert('Error', 'Failed to log in');
+      console.log('Failed to log in:', error);
+      Alert.alert('로그인 실패 했습니다.');
     }
   };
 
@@ -88,11 +88,6 @@ export default function LoginScreen() {
           <Text style={styles.footerLink}>create a new account</Text>
         </TouchableOpacity>
       </View>
-      
-
-      <TouchableOpacity style={styles.button} onPress={handleKid}>
-        <Text style={styles.buttonText}>아이정보입력</Text>
-      </TouchableOpacity>
     </View>
   );
 }

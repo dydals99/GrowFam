@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -10,232 +11,227 @@ import {
   Alert,
   Keyboard,
   TouchableWithoutFeedback,
-} from 'react-native';
-import { CameraView, Camera } from 'expo-camera';
-import * as ImageManipulator from 'expo-image-manipulator';
-import { API_URL } from '../../constants/config';
-import { DeviceMotion } from 'expo-sensors';
 
-const CameraScreen = () => {
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [step, setStep] = useState<'askSize' | 'capture' | 'result'>('askSize');
-  const [shoeSize, setShoeSize] = useState('');
-  const [annotatedUri, setAnnotatedUri] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [resultMessage, setResultMessage] = useState('');
+  Button
+} from 'react-native';
+import { Camera, CameraType, useCameraPermissions,CameraView } from 'expo-camera';
+import { useNavigation } from '@react-navigation/native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { API_URL } from '../../constants/config';
+
+type Step = 'askHeight' | 'result';
+
+const OnCamera: React.FC = () => {
+  const [permission, requestPermission] = useCameraPermissions();
+  const [facing, setFacing] = useState<CameraType>('back');
   const cameraRef = useRef<CameraView | null>(null);
-  const [pitch, setPitch] = useState(0); // 위아래 기울기
+  const navigation = useNavigation();
+
+  // 키 측정 상태
+  const [step, setStep] = useState<Step>('askHeight');
+  const [dadHeight, setDadHeight] = useState('');
+  const [childHeight, setChildHeight] = useState<number | null>(null);
+  const [annotUri, setAnnotUri] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // 타이머 상태
+  const [timerOn, setTimerOn] = useState(false);
+  const [countdown, setCountdown] = useState(0);
 
   useEffect(() => {
     (async () => {
       const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
+      if (status !== 'granted') console.warn('카메라 권한이 거부되었습니다.');
     })();
   }, []);
 
-  useEffect(() => {
-    // DeviceMotion 구독
-    const subscription = DeviceMotion.addListener((motionData) => {
-      const { accelerationIncludingGravity } = motionData;
-      const { x, y, z } = accelerationIncludingGravity;
-
-      // 핸드폰이 세워진 상태에서의 수직 기울기 계산 (상하 반전 적용)
-      const adjustedPitch = Math.atan2(z, -y) * (180 / Math.PI); // z와 y의 부호를 반전
-
-      setPitch(adjustedPitch); // 보정된 pitch 값 설정
-    });
-
-    // 업데이트 속도 설정
-    DeviceMotion.setUpdateInterval(100); // 100ms마다 업데이트
-
-    return () => subscription.remove(); // 컴포넌트 언마운트 시 구독 해제
-  }, []);
-
-  const takePhoto = async () => {
-    if (!cameraRef.current) return;
-    const photo = await cameraRef.current.takePictureAsync();
-    if (!photo?.uri) throw new Error('사진을 촬영하지 못했습니다.');
-    return await ImageManipulator.manipulateAsync(
-      photo.uri,
-      [{ resize: { width: 640 } }],
-      { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+  if (!permission) return <View />;
+  if (!permission.granted) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.message}>카메라에 접근하려면 권한이 필요합니다.</Text>
+        <Button onPress={requestPermission} title="권한 요청" />
+      </View>
     );
+  }
+
+  // 3초 카운트다운
+  const startCountdown = () => {
+    setCountdown(10);
+    const iv = setInterval(() => {
+      setCountdown(c => {
+        if (c <= 1) {
+          clearInterval(iv);
+          captureAndUpload();
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
   };
 
-  const handleNext = async () => {
+  const handleCapturePress = () => {
+    if (!dadHeight || isNaN(+dadHeight) || +dadHeight <= 0) {
+      Alert.alert('오류', '유효한 아빠 키를 입력해주세요.');
+      return;
+    }
+    if (timerOn) startCountdown();
+    else captureAndUpload();
+  };
+
+  const captureAndUpload = async () => {
+    if (!cameraRef.current) return;
+    setLoading(true);
     try {
-      if (step === 'askSize') {
-        if (!shoeSize || isNaN(+shoeSize)) {
-          Alert.alert('오류', '유효한 신발 사이즈를 입력해주세요.');
-          return;
-        }
-        setStep('capture');
-      } else if (step === 'capture') {
-        setIsLoading(true);
-        const img = await takePhoto();
-        if (!img) {
-          Alert.alert('오류', '사진 촬영에 실패했습니다.');
-          setIsLoading(false);
-          return;
-        }
-
-        const formData = new FormData();
-        formData.append('shoe_size', shoeSize.toString());
-        formData.append('image', {
-          uri: img.uri,
-          name: 'capture.jpg',
-          type: 'image/jpeg',
-        } as any);
-
-        const response = await fetch(`${API_URL}/estimate-height`, {
-          method: 'POST',
-          body: formData,
-        });
-        const data = await response.json();
-
-        if (data.success) {
-          setResultMessage(`추정 키: ${data.height_cm.toFixed(1)} cm`);
-          setAnnotatedUri(`data:image/jpeg;base64,${data.annotated_image}`);
-        } else {
-          setResultMessage('키 추정에 실패했습니다.');
-        }
-
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
+      if (!photo?.uri) throw new Error('촬영 실패');
+      const formData = new FormData();
+      formData.append('dad_height', dadHeight);
+      formData.append('image', {
+        uri: photo.uri,
+        name: `family_${Date.now()}.jpg`,
+        type: 'image/jpeg',
+      } as any);
+      const res = await fetch(`${API_URL}/estimate-child-height`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!data.success) {
+        Alert.alert('오류', data.error || '키 추정에 실패했습니다.');
+      } else {
+        setChildHeight(data.child_height_cm);
+        setAnnotUri(`data:image/jpeg;base64,${data.annotated_image}`);
         setStep('result');
-        setIsLoading(false);
-      } else if (step === 'result') {
-        setShoeSize('');
-        setAnnotatedUri(null);
-        setResultMessage('');
-        setStep('askSize');
       }
-    } catch (err) {
-      console.error(err);
-      Alert.alert('오류', '처리 중 오류가 발생했습니다.');
-      setIsLoading(false);
+    } catch (e) {
+      console.error(e);
+      Alert.alert('오류', '사진 촬영 또는 업로드 실패');
+    } finally {
+      setLoading(false);
+      setCountdown(0);
     }
   };
-
-  if (hasPermission === null) return <View />;
-  if (hasPermission === false) return <Text>카메라 권한이 필요합니다.</Text>;
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
-        {step === 'askSize' && (
-          <View style={styles.overlay}>
-            <Text style={styles.prompt}>신발 사이즈를 입력해주세요 (cm):</Text>
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              placeholder="예: 260"
-              value={shoeSize}
-              onChangeText={setShoeSize}
+        {step !== 'result' && (
+          <>
+            <CameraView
+              style={styles.camera}
+              facing={facing}
+              ref={cameraRef}
             />
-          </View>
-        )}
-
-        {step === 'capture' && (
-          <View style={styles.cameraContainer}>
-            <CameraView ref={cameraRef} style={styles.camera} />
-            {/* 수직선 오버레이 */}
+            {/* 뒤로가기 */}
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={() => navigation.navigate('index' as never)}
+            >
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
+            {/* 전/후면 전환 */}
+            <TouchableOpacity
+              style={styles.switchButton}
+              onPress={() => setFacing(f => (f === 'back' ? 'front' : 'back'))}
+            >
+              <Ionicons name="camera-reverse" size={30} color="#fff" />
+            </TouchableOpacity>
+            {/* 타이머 토글 */}
+            <TouchableOpacity
+              style={[styles.switchButton, { left: 20, right: undefined }]}
+              onPress={() => setTimerOn(on => !on)}
+            >
+              <Text style={styles.timerText}>{timerOn ? '⏱️ On' : '⏱️ Off'}</Text>
+            </TouchableOpacity>
+            {/* 키 입력 오버레이 */}
             <View style={styles.overlay}>
-              <View
-                style={[
-                  styles.verticalLine,
-                  { backgroundColor: Math.abs(pitch) > 10 ? 'red' : 'green' },
-                ]}
+              <Text style={styles.prompt}>아빠 키를 입력하세요 (cm):</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                placeholder="예: 175"
+                value={dadHeight}
+                onChangeText={setDadHeight}
+                placeholderTextColor="#ccc"
               />
             </View>
-          </View>
+            {/* 촬영 버튼 */}
+            <View style={styles.controlContainer}>
+              <TouchableOpacity
+                style={styles.captureButton}
+                onPress={handleCapturePress}
+                disabled={loading || countdown > 0}
+              >
+                <View style={styles.innerCircle} />
+              </TouchableOpacity>
+            </View>
+            {/* 카운트다운 표시 */}
+            {countdown > 0 && (
+              <View style={styles.countdownContainer}>
+                <Text style={styles.countdownText}>{countdown}</Text>
+              </View>
+            )}
+            {loading && (
+              <ActivityIndicator style={styles.loader} size="large" color="#fff" />
+            )}
+          </>
         )}
 
         {step === 'result' && (
           <View style={styles.resultContainer}>
-            <Text style={styles.resultText}>{resultMessage}</Text>
-            {annotatedUri && (
-              <Image
-                source={{ uri: annotatedUri }}
-                style={styles.fullPreview}
-              />
+            <Text style={styles.resultText}>
+              아이 예측 키: {childHeight?.toFixed(1)} cm
+            </Text>
+            {annotUri && (
+              <TouchableOpacity onPress={() => {}}>
+                <Image
+                  source={{ uri: annotUri }}
+                  style={styles.annotated}
+                />
+              </TouchableOpacity>
             )}
           </View>
         )}
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleNext}
-          disabled={isLoading}
-        >
-          <Text style={styles.buttonText}>
-            {step === 'askSize' && '다음'}
-            {step === 'capture' && '촬영 및 측정'}
-            {step === 'result' && '다시 시작'}
-          </Text>
-        </TouchableOpacity>
-
-        {isLoading && <ActivityIndicator size="large" color="#fff" />}
       </View>
     </TouchableWithoutFeedback>
   );
 };
 
+export default OnCamera;
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  cameraContainer: { flex: 1 },
-  camera: { flex: 1 },
+  camera: { flex: 1, width: '100%', height: '100%' },
+  headerButton: { position: 'absolute', top: 50, left: 10, zIndex: 20, padding: 8 },
+  switchButton: {
+    position: 'absolute', bottom: 20, right: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)', padding: 10, borderRadius: 25
+  },
+  timerText: { color: '#fff' },
   overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center', // 수평선이 화면 중앙에 위치하도록 설정
-    alignItems: 'center',
+    position: 'absolute', top: '25%', width: '100%', alignItems: 'center', paddingHorizontal: 40
   },
-  verticalLine: {
-    height: '90%', // 화면 높이의 90%
-    width: 3, // 선의 두께
-    backgroundColor: 'rgba(255, 255, 255, 0.7)', // 반투명 흰색
-  },
-  prompt: {
-    color: '#fff',
-    fontSize: 18,
-    marginBottom: 10,
-    textAlign: 'center',
-  },
+  prompt: { color: '#fff', fontSize: 18, marginBottom: 8, textAlign: 'center' },
   input: {
-    backgroundColor: '#fff',
-    padding: 10,
-    borderRadius: 6,
-    fontSize: 16,
-    textAlign: 'center',
+    width: '60%', borderColor: '#fff', borderWidth: 1, borderRadius: 6,
+    padding: 8, color: '#fff', textAlign: 'center'
   },
-  button: {
-    position: 'absolute',
-    bottom: 80,
-    alignSelf: 'center',
-    backgroundColor: '#1E90FF',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 10,
+  controlContainer: {
+    position: 'absolute', bottom: 20, width: '100%', alignItems: 'center'
   },
-  buttonText: { color: '#fff', fontSize: 16 },
-  resultContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  captureButton: { width: 80, height: 80, borderRadius: 40,
+    backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center',
+    borderWidth: 4, borderColor: '#ddd'
   },
-  resultText: {
-    color: '#fff',
-    fontSize: 22,
-    marginBottom: 16,
+  innerCircle: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#ff0000' },
+  countdownContainer: {
+    position: 'absolute', top: '45%', left: 0, right: 0, alignItems: 'center'
   },
-  fullPreview: {
-    width: '90%',
-    height: '60%',
-    resizeMode: 'contain',
-    marginTop: 16,
-  },
+  countdownText: { fontSize: 72, color: '#fff', fontWeight: 'bold' },
+  loader: { position: 'absolute', top: '50%', left: '45%' },
+  resultContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  resultText: { color: '#fff', fontSize: 22, marginBottom: 20 },
+  annotated: { width: 300, height: 400, borderWidth: 2, borderColor: '#fff' },
+  message: { textAlign: 'center', paddingBottom: 10, color: '#fff' }
 });
-
-export default CameraScreen;

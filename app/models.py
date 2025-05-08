@@ -32,6 +32,7 @@ class User(Base):
     user_password = Column(String(100), nullable=False)
     user_role = Column(String(20), default="member")
     user_regist_at = Column(TIMESTAMP, server_default=func.now())
+    user_profile = Column(String, nullable=True)
 
     communities = relationship("Community", back_populates="owner")
 

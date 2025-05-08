@@ -6,63 +6,60 @@ import base64
 from ultralytics import YOLO
 
 router = APIRouter()
-shoe_model   = YOLO("models/mybest.pt")
-person_model = YOLO("yolov8n.pt")
 
-@router.post("/estimate-height")
-async def estimate_height(
-    shoe_size: float = Form(...),
-    image: UploadFile = File(...)
+# Detect 전용 COCO person 모델
+person_model = YOLO("yolov8n.pt", task="detect")
+
+def encode_b64(img: np.ndarray) -> str:
+    _, buf = cv2.imencode('.jpg', img)
+    return base64.b64encode(buf).decode('utf-8')
+
+@router.post("/estimate-child-height")
+async def estimate_child_height(
+    dad_height:    float      = Form(...),    # 아빠 키(cm)
+    image:         UploadFile = File(...)
 ):
     try:
-        # 1. 이미지 디코딩
-        img_bytes = await image.read()
-        np_img = cv2.imdecode(np.frombuffer(img_bytes, np.uint8), cv2.IMREAD_COLOR)
-        if np_img is None:
-            return JSONResponse({"success": False, "error": "디코딩 실패"})
+        # 1) 이미지 디코딩
+        data = await image.read()
+        img  = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+        if img is None:
+            return JSONResponse({"success": False, "error": "이미지 디코딩 실패"})
 
-        # 2. 신발 검출
-        sres = shoe_model(np_img)[0]
-        if not sres.boxes:
-            return JSONResponse({"success": False, "error": "신발 미검출"})
-        sx1, sy1, sx2, sy2 = map(int, sres.boxes[0].xyxy[0])
-        pixel_shoe_w = sx2 - sx1
+        # 2) 사람 검출 (모두 검출)
+        res = person_model(img, conf=0.1)[0]
+        boxes = res.boxes.xyxy.cpu().numpy()      # (N, 4)
+        confs = res.boxes.conf.cpu().numpy().flatten()
+        clss  = res.boxes.cls.cpu().numpy().astype(int).flatten()
 
-        # 3. 사람 검출
-        pres = person_model(np_img)[0]
-        if not pres.boxes:
-            return JSONResponse({"success": False, "error": "사람 미검출"})
-        px1, py1, px2, py2 = map(int, pres.boxes[0].xyxy[0])
-        pixel_person_h = py2 - py1
+        # coco person 클래스 id == 0
+        idxs = np.where(clss == 0)[0]
+        if idxs.size < 2:
+            return JSONResponse({"success": False, "error": "두 사람 미검출"})
 
-        # 4. 키 계산
-        pixel_shoe_h = sy2 - sy1  # 신발 바운딩 박스의 높이 계산
-        if pixel_shoe_h <= 0 or shoe_size <= 0:
-            return JSONResponse({"success": False, "error": "신발 크기 또는 바운딩 박스 오류"})
+        # 3) 픽셀 높이 기준 내림차순 정렬
+        heights = [(i, boxes[i,3] - boxes[i,1]) for i in idxs]
+        heights.sort(key=lambda x: x[1], reverse=True)
+        dad_idx, dad_pix_h   = heights[0]
+        child_idx, child_pix_h = heights[1]
 
-        ratio = pixel_shoe_h / shoe_size   # px per cm
-        height_cm = pixel_person_h / ratio
+        # 4) 보정 계수 계산 & 아이 키 추정
+        px_per_cm   = dad_pix_h / dad_height
+        child_height = child_pix_h / px_per_cm
 
-        # 디버깅 로그 출력
-        print(f"픽셀 신발 높이: {pixel_shoe_h}, 신발 사이즈: {shoe_size}, 비율: {ratio}, 픽셀 사람 높이: {pixel_person_h}, height_cm: {height_cm}")
+        # 5) 시각화 (아빠=빨강, 아이=파랑)
+        ann = img.copy()
+        x1,y1,x2,y2 = boxes[dad_idx].astype(int)
+        cv2.rectangle(ann, (x1,y1), (x2,y2), (0,0,255), 3)
+        x1,y1,x2,y2 = boxes[child_idx].astype(int)
+        cv2.rectangle(ann, (x1,y1), (x2,y2), (255,0,0), 3)
 
-        if height_cm <= 50 or height_cm >= 250:  # 비정상적인 키 값 필터링
-            return JSONResponse({"success": False, "error": "비정상적인 키 계산 결과"})
-
-        # 5. 바운딩 박스 시각화
-        annotated = np_img.copy()
-        cv2.rectangle(annotated, (sx1, sy1), (sx2, sy2), (0,255,0), 2)   # 신발: 녹색
-        cv2.rectangle(annotated, (px1, py1), (px2, py2), (255,0,0), 2)   # 사람: 파란색
-
-        # JPEG 인코딩 → base64
-        _, buffer = cv2.imencode('.jpg', annotated)
-        jpg_as_text = base64.b64encode(buffer).decode('utf-8')
+        b64_ann = encode_b64(ann)
 
         return JSONResponse({
-            "success": True,
-            "height_cm": height_cm,
-            "annotated_image": jpg_as_text
+            "success":          True,
+            "child_height_cm":  round(child_height, 1),
+            "annotated_image":  b64_ann
         })
-
     except Exception as e:
         return JSONResponse({"success": False, "error": str(e)})

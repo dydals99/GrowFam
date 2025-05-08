@@ -55,7 +55,7 @@ const GlowFamScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       {/* 상단 헤더 */}
-      <Text style={styles.title}>GLOWFAM</Text>
+      <Text style={styles.title}>가족 순위</Text>
       <Text style={styles.subtitle}>가족별 목표치 달성률</Text>
 
       {/* 구분선 */}
@@ -110,14 +110,14 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   familyName: {
-    width: 100, // 글씨 위치를 안쪽으로 모으기
+    width: 160, // 글씨 위치를 안쪽으로 모으기
     fontSize: 16,
     color: '#555',
     textAlign: 'right',
     marginRight: 10, // 오른쪽 간격 조정
   },
   progressBarBackground: {
-    width: 180, // 그래프 크기 고정
+    width: 150, // 그래프 크기 고정
     height: 10,
     backgroundColor: '#e0f2f1', 
     borderRadius: 5,
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   percentText: {
-    width: 80, // 오른쪽 텍스트도 안쪽으로 정렬
+    width: 100, // 오른쪽 텍스트도 안쪽으로 정렬
     textAlign: 'left',
     fontSize: 16,
     color: '#333',

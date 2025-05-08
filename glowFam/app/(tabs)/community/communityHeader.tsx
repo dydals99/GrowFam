@@ -15,10 +15,10 @@ export default function CommunityHeader({
 }: CommunityHeaderProps) {
   return (
     <View style={styles.headerContainer}>
-      <Text style={styles.header}>GROWFARM</Text>
+      <Text style={styles.header}>커뮤니티</Text>
       <TextInput
         style={styles.searchBar}
-        placeholder="궁금하신 점을 입력해주세요"
+        placeholder="궁금하신 점을 입력해주세요" 
         value={searchText}
         onChangeText={setSearchText}
         onFocus={() => setSearchFocused(true)}

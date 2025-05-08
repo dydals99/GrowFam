@@ -9,7 +9,7 @@ const AuthMiddleware = ({ children }: { children: React.ReactNode }) => {
     const checkAuth = async () => {
       const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        router.replace('./(tabs)/users/login'); // 로그인 화면으로 이동
+        router.replace('./(tabs)/users/login');
       }
     };
 

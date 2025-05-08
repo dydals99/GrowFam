@@ -56,7 +56,7 @@ export default function MainScreen() {
         },
       });
       if (!userResponse.ok) {
-        console.error("사용자 정보를 가져오는데 실패했습니다.");
+        console.log("사용자 정보를 가져오는데 실패했습니다.");
         return;
       }
       const userData = await userResponse.json();
@@ -102,7 +102,7 @@ export default function MainScreen() {
         });
 
         if (!response.ok) {
-          console.error("사용자 인증에 실패했습니다.");
+          console.log("사용자 인증에 실패했습니다.");
           if (response.status === 401) {
             console.log("토큰이 유효하지 않거나 만료되었습니다. 로그인 화면으로 이동합니다.");
             router.replace("./users/login");
