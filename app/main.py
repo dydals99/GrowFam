@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-import asyncio
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi.staticfiles import StaticFiles
 from app.database import engine, Base
@@ -17,23 +17,13 @@ import os
 
 load_dotenv()
 
-
-
+@asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Starting application...")
-
-    yield  # 애플리케이션 실행 중
-
-    print("Shutting down application...")
-    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
-    for task in tasks:
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            print(f"Task {task} was cancelled.")
-        except Exception as e:
-            print(f"Error in task {task}: {e}")
+    try:
+        yield
+    finally:
+        print("Shutting down application...")
 
 app = FastAPI(title="GrowFarm Community API", lifespan=lifespan)
 

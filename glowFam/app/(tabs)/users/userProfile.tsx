@@ -151,6 +151,13 @@ const UserProfile = () => {
         >
           <Text style={styles.modifyText}>수정</Text>
         </ListItem>
+        <ListItem
+          label={'비밀번호'}
+          value=""
+          onPress={() => Alert.alert('이메일 수정')}
+        >
+          <Text style={styles.modifyText}>수정</Text>
+        </ListItem>
 
       </View>
 
@@ -159,9 +166,8 @@ const UserProfile = () => {
         <SectionHeader title="아이정보" />
         <ListItem
           value=""
-          label={email}
-          onPress={() => Alert.alert('이메일 수정')}
-        >
+          label={'나이 : 9세 / 키 : 120cm / 몸무게 : 30kg'}
+          onPress={() => Alert.alert('')}>
           <Text style={styles.modifyText}>수정</Text>
         </ListItem>
         
@@ -182,6 +188,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 30,
     marginBottom: 10,
+    paddingTop : 100
   },
   profileImage: { width: 80, height: 80, borderRadius: 40, marginBottom: 10 },
   nameText: { fontSize: 18, fontWeight: 'bold' },

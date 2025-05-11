@@ -107,7 +107,7 @@ class Family(FamilyBase):
     family_regist_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class FamilyMonthGoalsBase(BaseModel):
@@ -120,7 +120,7 @@ class FamilyMonthGoals(FamilyMonthGoalsBase):
     month_golas_no: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class KidInfoBase(BaseModel):
@@ -137,4 +137,4 @@ class KidInfo(KidInfoBase):
     kid_info_regist_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True

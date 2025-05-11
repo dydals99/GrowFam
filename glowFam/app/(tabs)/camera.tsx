@@ -1,23 +1,12 @@
+
 import 'react-native-gesture-handler';
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  ActivityIndicator,
-  Image,
-  Alert,
-  Keyboard,
-  TouchableWithoutFeedback,
-
-  Button
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Image, Alert, Keyboard, TouchableWithoutFeedback, Button} from 'react-native';
 import { Camera, CameraType, useCameraPermissions,CameraView } from 'expo-camera';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { API_URL } from '../../constants/config';
+import { DeviceMotion } from 'expo-sensors';
 
 type Step = 'askHeight' | 'result';
 
@@ -33,6 +22,7 @@ const OnCamera: React.FC = () => {
   const [childHeight, setChildHeight] = useState<number | null>(null);
   const [annotUri, setAnnotUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pitch, setPitch] = useState<number | null>(null);
 
   // 타이머 상태
   const [timerOn, setTimerOn] = useState(false);
@@ -43,6 +33,21 @@ const OnCamera: React.FC = () => {
       const { status } = await Camera.requestCameraPermissionsAsync();
       if (status !== 'granted') console.warn('카메라 권한이 거부되었습니다.');
     })();
+
+    // DeviceMotion 구독
+     const subscription = DeviceMotion.addListener(({ rotation }) => {
+      if (rotation?.beta != null) {
+        const pitchDeg = (rotation.beta * 180) / Math.PI;
+        const setVertical = Math.abs(pitchDeg - 90);
+        setPitch(setVertical);;
+      }
+    });
+
+    DeviceMotion.setUpdateInterval(200);
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   if (!permission) return <View />;
@@ -87,6 +92,7 @@ const OnCamera: React.FC = () => {
       if (!photo?.uri) throw new Error('촬영 실패');
       const formData = new FormData();
       formData.append('dad_height', dadHeight);
+      formData.append('camera_pitch', pitch?.toFixed(2) || '0'); 
       formData.append('image', {
         uri: photo.uri,
         name: `family_${Date.now()}.jpg`,
@@ -232,6 +238,6 @@ const styles = StyleSheet.create({
   loader: { position: 'absolute', top: '50%', left: '45%' },
   resultContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   resultText: { color: '#fff', fontSize: 22, marginBottom: 20 },
-  annotated: { width: 300, height: 400, borderWidth: 2, borderColor: '#fff' },
+  annotated: { width: 300, height: 600, borderWidth: 2, borderColor: '#fff' },
   message: { textAlign: 'center', paddingBottom: 10, color: '#fff' }
 });

@@ -49,8 +49,8 @@ EMAIL_PASSWORD = "jelu brbu lnuq otnh"  # Gmail 앱 비밀번호로 업데이트
 
 def send_email(to_email: str, code: str):
     try:
-        subject = "Your Verification Code"
-        body = f"Your verification code is: {code}"
+        subject = "GlowFam 인증코드"
+        body = f"안녕하세요 당신의 인증코드는 : {code}"
 
         msg = MIMEText(body)
         msg["Subject"] = subject
