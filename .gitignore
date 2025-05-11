@@ -2,12 +2,13 @@ node_modules
 
 constants
 
-
+static
 uploaded_photos
 uploaded_files
 
 .env
 static\uploaded_user_profile
 models
+
 yolov8n
 yolov8s
