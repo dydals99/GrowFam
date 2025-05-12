@@ -161,17 +161,7 @@ const UserProfile = () => {
 
       </View>
 
-      {/* 보안설정 섹션 */}
-      <View style={styles.card}>
-        <SectionHeader title="아이정보" />
-        <ListItem
-          value=""
-          label={'나이 : 9세 / 키 : 120cm / 몸무게 : 30kg'}
-          onPress={() => Alert.alert('')}>
-          <Text style={styles.modifyText}>수정</Text>
-        </ListItem>
-        
-      </View>
+      
 
       {/* 로그아웃 버튼 */}
       <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>

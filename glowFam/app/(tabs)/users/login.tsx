@@ -9,10 +9,6 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const router = useRouter();
 
-  const handleKid = async () => {
-    router.push('../family/familyInfo'); // 올바른 경로로 수정
-  }
-
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -37,7 +33,7 @@ export default function LoginScreen() {
       await AsyncStorage.setItem('access_token', data.access_token); // JWT 토큰 저장
 
       Alert.alert('Success', 'Login successful!');
-      router.replace('/'); // 올바른 경로로 수정
+      router.push('/'); // 올바른 경로로 수정
     } catch (error) {
       console.log('Failed to log in:', error);
       Alert.alert('로그인 실패 했습니다.');

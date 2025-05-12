@@ -21,7 +21,7 @@ const HeaderNav: React.FC = () => {
       <Text style={styles.headerTitle}>메인 화면</Text>
 
       {/* 📷 카메라 버튼 */}
-      <TouchableOpacity style={styles.cameraButton} onPress={() => router.push("/camera")}>
+      <TouchableOpacity style={styles.cameraButton} onPress={() => router.push("/measure/measure_list")}>
         <Text style={styles.cameraIcon}>📷</Text>
       </TouchableOpacity>
     </View>
