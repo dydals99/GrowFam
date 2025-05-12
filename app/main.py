@@ -4,15 +4,14 @@ from dotenv import load_dotenv
 from fastapi.staticfiles import StaticFiles
 from app.database import engine, Base
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers.gallery import router as gallery_router
-from app.routers.community_like import router as community_like_router  
-from app.routers.community import router as community_router
-from app.routers.schedule import router as schedule_router
-from app.routers.graph import router as graph_router
-from app.routers.users import router as users_router
-from app.routers.family import router as family_router
-from app.routers.act_camera import router as act_camera_router
-from app.routers.community_coment import router as community_coment_router
+from app.routers.community.community_like import router as community_like_router  
+from app.routers.community.community import router as community_router
+from app.routers.community.community_coment import router as community_coment_router
+from routers.schedule.schedule import router as schedule_router
+from routers.schedule.graph import router as graph_router
+from routers.users.users import router as users_router
+from routers.users.family import router as family_router
+from routers.measure.act_measure import router as act_measure
 import os
 
 load_dotenv()
@@ -42,8 +41,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 # 라우터 추가
-app.include_router(act_camera_router)
-app.include_router(gallery_router)
+app.include_router(act_measure)
 app.include_router(community_router)
 app.include_router(community_like_router)
 app.include_router(schedule_router)

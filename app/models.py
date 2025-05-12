@@ -5,24 +5,6 @@ from sqlalchemy.sql import func
 
 Base = declarative_base()
 
-class UserPhoto(Base):
-    __tablename__ = "tb_user_photos"
-    
-    file_no = Column(Integer, primary_key=True, index=True)
-    file_name = Column(String, nullable=False)  # 파일명 (UUID)
-    contour_path = Column(String, nullable=False)  # 윤곽선 URL 저장
-    uploaded_at = Column(DateTime, server_default=func.now(), nullable=False)  # 업로드 시간
-    
-
-
-class CombineImage(Base):
-    __tablename__ = "tb_combine_image"
-    
-    combine_image_no = Column(Integer, primary_key=True, index=True)
-    combine_image_name = Column(String, nullable=False)
-    combine_image_path = Column(String, nullable=False)
-    combine_image_at = Column(DateTime, server_default=func.now(), nullable=False)
-
 class User(Base):
     __tablename__ = "tb_users"
     user_no = Column(Integer, primary_key=True, index=True)

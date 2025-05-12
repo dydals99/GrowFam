@@ -5,7 +5,7 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator,
 import { Camera, CameraType, useCameraPermissions,CameraView } from 'expo-camera';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { API_URL } from '../../constants/config';
+import { API_URL } from '../../../constants/config';
 import { DeviceMotion } from 'expo-sensors';
 
 type Step = 'askHeight' | 'result';
