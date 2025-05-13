@@ -1,9 +1,20 @@
-// schedule.tsx
 import React, { useState, useCallback } from "react";
-import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, SafeAreaView, Alert, ScrollView,} from "react-native";
-import { useFocusEffect } from '@react-navigation/native';
-import { API_URL } from "../../../constants/config";
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  Alert,
+  TouchableOpacity,
+  Modal,
+  ScrollView, TextInput
+} from "react-native";
+import { Calendar } from "react-native-calendars";
+import { useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_URL } from "../../../constants/config";
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useEffect } from "react";
 
 interface ScheduleType {
   scheduleNo: number;
@@ -11,9 +22,12 @@ interface ScheduleType {
   scheduleDate: string;
   totalCount: number;
   completedCount: number;
-  lastCheckDate?: string; 
+  lastCheckDate?: string;
 }
-
+interface ScheduleCheckLog {
+  familyNo : number;
+  scheduleCheckLog: string; 
+}
 let family_no = 0;
 
 const fetchFamilyNo = async () => {
@@ -21,142 +35,185 @@ const fetchFamilyNo = async () => {
     const token = await AsyncStorage.getItem("access_token");
     if (!token) throw new Error("JWT 토큰이 없습니다.");
 
-    const userResponse = await fetch(`${API_URL}/users/me`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!userResponse.ok) throw new Error("사용자 정보를 가져오는데 실패했습니다.");
-    const userData = await userResponse.json();
-    const user_no = userData.user_no;
+    const userNo = await AsyncStorage.getItem("user_no");
+    if (!userNo) throw new Error("사용자 번호를 찾을 수 없습니다.");
 
-    const familyResponse = await fetch(`${API_URL}/users/family/${user_no}`);
+    const familyResponse = await fetch(`${API_URL}/users/family/${userNo}`);
     if (!familyResponse.ok) throw new Error("가족 정보를 가져오는데 실패했습니다.");
     const familyData = await familyResponse.json();
     return familyData.family_no;
   } catch (error) {
-    if (error instanceof Error) {
-      Alert.alert("오류", error.message);
-    } else {
-      Alert.alert("오류", "알 수 없는 오류가 발생했습니다.");
-    }
+    Alert.alert("오류", error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.");
     return null;
   }
 };
 
+// 유틸리티 함수
+const parseSchedules = (data: any[]): ScheduleType[] => {
+  return data.map((item: any) => ({
+    scheduleNo: item.scheduleNo,
+    scheduleContent: item.scheduleContent,
+    scheduleDate: item.scheduleDate,
+    totalCount: item.totalCount,
+    completedCount: item.completedCount,
+    lastCheckDate: item.lastCheckDate,
+  }));
+};
+
+const logsSchedules = (data: any[]): { familyNo: number; scheduleCheckLog: Date }[] => {
+  return data.map((item: any) => ({
+    familyNo: item.family_no, // API 응답의 필드 이름과 일치시킴
+    scheduleCheckLog: new Date(item.schedule_check_date_log), // 올바른 필드 사용
+  }));
+};
+
 export default function ScheduleScreen() {
-  const [monthGoal, setMonthGoal] = useState("");
-  const [modalVisible, setModalVisible] = useState(false);
-  const [scheduleContent, setScheduleContent] = useState("");
-  const [registeredSchedules, setRegisteredSchedules] = useState<ScheduleType[]>([]);
+  const [monthGoal, setMonthGoal] = useState(""); // 이달의 목표
+  const [markedDates, setMarkedDates] = useState({}); // 캘린더 표시 데이터
+  const [registeredSchedules, setRegisteredSchedules] = useState<ScheduleType[]>([]); // 등록된 일정
+  const [modalVisible, setModalVisible] = useState(false); // 모달 창 상태
+  const [newScheduleContent, setNewScheduleContent] = useState(""); // 새 일정 내용
+  const [selectedTime, setSelectedTime] = useState(new Date()); // 시간 선택
 
-  const getTodayString = () => {
-    const today = new Date();
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(
-      today.getDate()
-    ).padStart(2, "0")}`;
-  };
-
-  const getRemainingDaysInMonth = () => {
-    const today = new Date();
-    const totalDaysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-    return totalDaysInMonth - today.getDate() + 1;
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return `${String(date.getMonth() + 1).padStart(2, "0")}월${String(date.getDate()).padStart(2, "0")}일`;
-  };
-
-  const getMonthLastDay = (dateString: string) => {
-    const date = new Date(dateString);
-    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-    return String(lastDay).padStart(2, "0");
-  };
-
-  const toggleModal = () => {
-    setModalVisible(!modalVisible);
-  };
-
-  // 가족 목표(이달의 목표)를 가져오는 함수
-  const fetchFamilyGoal = async () => {
+  const checkSchedule = async (scheduleNo: number): Promise<void> => {
     try {
-      const response = await fetch(`${API_URL}/schedule/family-goal/${family_no}`);
-      if (!response.ok) throw new Error("가족 목표 조회에 실패했습니다.");
+      // 해당 일정 찾기
+      const schedule = registeredSchedules.find((s) => s.scheduleNo === scheduleNo);
+      if (!schedule) {
+        Alert.alert("오류", "일정을 찾을 수 없습니다.");
+        return;
+      }
+
+      // 이미 오늘 체크된 일정인지 확인
+      const todayString = getTodayString();
+      if (schedule.lastCheckDate === todayString) {
+        Alert.alert("알림", "이미 오늘 체크된 일정입니다.");
+        return;
+      }
+
+      // 체크 API 호출
+      const response = await fetch(`${API_URL}/schedule/check/${scheduleNo}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ increment: 1 }),
+      });
+      if (!response.ok) throw new Error("체크 업데이트에 실패했습니다.");
       const data = await response.json();
-      setMonthGoal(data.month_golas_contents);
+
+      // 일정 리스트 업데이트
+      setRegisteredSchedules((prev) =>
+        prev.map((s) =>
+          s.scheduleNo === scheduleNo
+            ? { ...s, completedCount: data.schedule_check_count, lastCheckDate: todayString }
+            : s
+        )
+      );
+
+      // 체크 로그 다시 가져오기
+      await fetchScheduleCheckLogs();
+
+      Alert.alert("완료", "일정이 체크되었습니다.");
     } catch (error: any) {
       Alert.alert("오류", error.message);
     }
   };
 
-  // 등록된 일정을 가져오는 함수
+  // 이달의 목표 가져오기
+  const fetchFamilyGoal = async () => {
+    try {
+      const response = await fetch(`${API_URL}/schedule/family-goal/${family_no}`);
+      if (!response.ok) throw new Error("가족 목표 조회에 실패했습니다.");
+      const data = await response.json();
+      setMonthGoal(data.month_golas_contents || "목표가 설정되어 있지 않습니다.");
+    } catch (error: any) {
+      Alert.alert("오류", error.message);
+    }
+  };
+
+  // 일정 가져오기
   const fetchSchedules = async () => {
     try {
       const response = await fetch(`${API_URL}/schedule/${family_no}`);
       if (!response.ok) throw new Error("일정 조회에 실패했습니다.");
       const data = await response.json();
 
-      const parsedSchedules: ScheduleType[] = data.map((item: any) => ({
-        scheduleNo: item.scheduleNo,
-        scheduleContent: item.scheduleContent,
-        scheduleDate: item.scheduleDate,
-        totalCount: item.totalCount,
-        completedCount: item.completedCount,
-        lastCheckDate: item.lastCheckDate, // lastCheckDate 추가
-      }));
+      const parsedSchedules = parseSchedules(data);
 
       setRegisteredSchedules(parsedSchedules);
+
+      const marked = parsedSchedules.reduce<Record<string, { marked: boolean; dotColor: string }>>((acc, schedule) => {
+        acc[schedule.scheduleDate] = { marked: true, dotColor: "green" };
+        return acc;
+      }, {});
+      setMarkedDates(marked);
     } catch (error: any) {
       Alert.alert("오류", error.message);
     }
   };
 
-  const fetchScheduleWithCheck = async (scheduleNo: number) => {
+  const fetchScheduleCheckLogs = async () => {
     try {
-      const response = await fetch(`${API_URL}/schedule/check-status/${scheduleNo}`);
-      if (!response.ok) throw new Error("체크 상태 조회에 실패했습니다.");
-      const data = await response.json();
+      const response = await fetch(`${API_URL}/schedule/check-logs/${family_no}`);
+      if (!response.ok) throw new Error("체크 로그를 가져오는데 실패했습니다.");
+      const data: ScheduleCheckLog[] = await response.json();
 
-      setRegisteredSchedules((prev) =>
-        prev.map((item) => {
-          if (item.scheduleNo === scheduleNo) {
-            return { ...item, completedCount: data.completedCount };
-          }
-          return item;
-        })
-      );
+      const parsedLogs = logsSchedules(data);
+
+
+      const marked = parsedLogs.reduce<Record<string, { customStyles: { container: any; text: any } }>>((acc, log) => {
+      const dateString = `${log.scheduleCheckLog.getFullYear()}-${String
+        (log.scheduleCheckLog.getMonth() + 1).padStart(2,"0")}-${String(log.scheduleCheckLog.getDate()).padStart(2, "0")}`;
+      acc[dateString] = {
+        customStyles: {
+          container: {
+            borderWidth: 1.5,
+            borderColor: "#b7d6bb",
+            borderRadius: 25, 
+          },
+          text: {},
+        },
+      };
+      return acc;
+      }, {});
+      setMarkedDates((prev) => ({ ...prev, ...marked }));
     } catch (error: any) {
       Alert.alert("오류", error.message);
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      const initializeData = async () => {
-        const familyNo = await fetchFamilyNo();
-        if (familyNo) {
-          family_no = familyNo;
-          fetchFamilyGoal();
-          fetchSchedules();
-        }
-      };
-      initializeData();
-    }, [])
-  );
-
+  // 오늘 날짜 가져오기
+  const getTodayString = () => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(
+      today.getDate()
+    ).padStart(2, "0")}`;
+  };
+  // 모달 열기/닫기
+  const toggleModal = () => {
+    setModalVisible(!modalVisible);
+  };
+   const getRemainingDaysInMonth = () => {
+    const today = new Date();
+    const totalDaysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    return totalDaysInMonth - today.getDate() + 1;
+  };
+  // 새 일정 등록
   const registerSchedule = async () => {
     const scheduleDate = getTodayString();
     const remainingDays = getRemainingDaysInMonth();
-
+  
+    if (!newScheduleContent.trim()) {
+      Alert.alert("오류", "일정 내용을 입력해주세요.");
+      return;
+    }
+  
     const payload = {
       family_no: family_no,
-      schedule_cotents: scheduleContent,
+      schedule_cotents: newScheduleContent,
       schedule_date: scheduleDate,
       schedule_check_count: remainingDays,
     };
-
+  
     try {
       const response = await fetch(`${API_URL}/schedule/write`, {
         method: "POST",
@@ -165,143 +222,114 @@ export default function ScheduleScreen() {
       });
       if (!response.ok) throw new Error("일정 등록에 실패했습니다.");
       const data = await response.json();
-
+  
       const newSchedule: ScheduleType = {
         scheduleNo: data.scheduleNo,
         scheduleContent: data.scheduleContent,
         scheduleDate: data.scheduleDate,
-        totalCount: data.scheduleTotalCount,
-        completedCount: 0,
+        totalCount: data.totalCount,
+        completedCount: data.completedCount || 0,
       };
-
-      // 상태 업데이트: 새로 등록된 데이터를 추가
+  
       setRegisteredSchedules((prev) => [...prev, newSchedule]);
-
+  
+      setMarkedDates((prev) => ({
+        ...prev,
+        [newSchedule.scheduleDate]: { marked: true, dotColor: "green" },
+      }));
+      await fetchSchedules();
       Alert.alert("완료", "일정이 등록되었습니다.");
-      setModalVisible(false);
-      setScheduleContent("");
+      toggleModal();
+      setNewScheduleContent("");
     } catch (error: any) {
       Alert.alert("오류", error.message);
     }
   };
-
-  // 체크 수를 백엔드에 업데이트하는 함수
-  const updateScheduleCheck = async (scheduleNo: number): Promise<number | null> => {
-    try {
-      const response = await fetch(`${API_URL}/schedule/check/${scheduleNo}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ increment: 1 }),
-      });
-      if (!response.ok) throw new Error("체크 업데이트에 실패했습니다.");
-      const data = await response.json();
-      return data.schedule_check_count;
-    } catch (error: any) {
-      Alert.alert("오류", error.message);
-      return null;
-    }
-  };
-
-  const handleCheckPress = async (scheduleNo: number) => {
-    const target = registeredSchedules.find((item) => item.scheduleNo === scheduleNo);
-    if (!target) return;
-
-    if (target.completedCount >= target.totalCount) {
-      Alert.alert("완료", "이미 모두 체크되었습니다.");
-      return;
-    }
-
-    if (target.lastCheckDate === new Date().toISOString().split("T")[0]) {
-      Alert.alert("오류", "오늘은 이미 체크했습니다.");
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_URL}/schedule/check/${scheduleNo}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ increment: 1 }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        if (errorData.detail === "오늘은 이미 체크했습니다.") {
-          Alert.alert("오류", "오늘은 이미 체크했습니다.");
-          return;
+  
+  // 초기 데이터 로드
+  useFocusEffect(
+    useCallback(() => {
+      const initializeData = async () => {
+        const familyNo = await fetchFamilyNo();
+        if (familyNo) {
+          family_no = familyNo;
+          await fetchFamilyGoal();
+          await fetchSchedules();
+          await fetchScheduleCheckLogs(); // 체크 로그 가져오기
         }
-        throw new Error("체크 상태 업데이트에 실패했습니다.");
-      }
-
-      const data = await response.json();
-      setRegisteredSchedules((prev) =>
-        prev.map((item) => {
-          if (item.scheduleNo === scheduleNo) {
-            return { ...item, completedCount: data.schedule_check_count, lastCheckDate: new Date().toISOString().split("T")[0] };
-          }
-          return item;
-        })
-      );
-      Alert.alert("체크 완료", "체크가 되었습니다.");
-    } catch (error: any) {
-      Alert.alert("오류", error.message);
-    }
-  };
-
-  const renderCheckButton = (schedule: ScheduleType) => {
-    const isDisabled = schedule.lastCheckDate === new Date().toISOString().split("T")[0];
-
-    return (
-      <TouchableOpacity
-        style={[
-          styles.checkButton,
-          isDisabled && { backgroundColor: "#ccc" },
-        ]}
-        onPress={() => handleCheckPress(schedule.scheduleNo)}
-        disabled={isDisabled}
-      >
-        <Text style={styles.checkButtonText}>체크</Text>
-      </TouchableOpacity>
-    );
-  };
+      };
+      initializeData();
+    }, [])
+  );
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.screenTitle}>일정 관리</Text>
+      <ScrollView>
+        {/* 이달의 목표 */}
+        <View style={styles.goalSection}>
+          <Text style={styles.goalLabel}>이달의 목표</Text>
+          <Text style={styles.goalText}>{monthGoal}</Text>
+        </View>
 
-      {/* 이달의 목표 섹션: 백엔드에서 가져온 값을 표시 */}
-      <View style={styles.goalSection}>
-        <Text style={styles.goalLabel}>이달의 목표</Text>
-        <Text style={styles.goalText}>
-          {monthGoal || "목표가 설정되어 있지 않습니다."}
-        </Text>
-      </View>
+        {/* 일정 리스트 */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>일정</Text>
+            <TouchableOpacity onPress={toggleModal} style={styles.addButton}>
+              <Text style={styles.addButtonText}>＋</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {registeredSchedules.length > 0 ? (
+          registeredSchedules.map((schedule) => {
+            const isToday = schedule.scheduleDate === getTodayString();
+            const month = new Date(schedule.scheduleDate).getMonth() + 1;
+            const startDay = new Date(schedule.scheduleDate).getDate();
+            const dateRange = `${month}월${String(startDay).padStart(2, "0")}일`;
 
-      <TouchableOpacity style={styles.addButton} onPress={toggleModal}>
-        <Text style={styles.addButtonText}>＋</Text>
-      </TouchableOpacity>
+          
+            const isCheckedToday = schedule.lastCheckDate === getTodayString();
 
-      <ScrollView style={styles.registeredList}>
-        {registeredSchedules.map((schedule) => {
-          const month = new Date(schedule.scheduleDate).getMonth() + 1;
-          const startDay = new Date(schedule.scheduleDate).getDate();
-          const dateRange = `${month}월${String(startDay).padStart(2, "0")}일 ~ ${month}월${getMonthLastDay(
-            schedule.scheduleDate
-          )}일`;
-
-          return (
-            <View key={schedule.scheduleNo} style={styles.registeredContainer}>
-              <Text style={styles.registeredText}>
-                등록된 일정: {schedule.scheduleContent}
-              </Text>
-              <Text style={styles.registeredText}>
-                [{dateRange}] 미션 현황: {schedule.completedCount}/{schedule.totalCount}
-              </Text>
-              {renderCheckButton(schedule)}
-            </View>
-          );
-        })}
+            return (
+              <View key={schedule.scheduleNo} style={styles.scheduleItem}>
+                <Text style={styles.scheduleContent}>
+                  {schedule.scheduleContent}
+                </Text>
+                <Text style={styles.scheduleProgress}>
+                  [{dateRange}] {schedule.completedCount}/{schedule.totalCount}
+                </Text>
+                {/* 체크 버튼 */}
+                <TouchableOpacity
+                  onPress={() => !isCheckedToday && checkSchedule(schedule.scheduleNo)}
+                  style={[
+                    styles.checkButton,
+                    isCheckedToday && styles.checkButtonDisabled, // 이미 체크된 경우 스타일 변경
+                  ]}
+                  disabled={isCheckedToday} // 이미 체크된 경우 비활성화
+                >
+                  <Text style={styles.checkButtonText}>✓</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })
+        ) : (
+          <Text style={styles.noSchedulesText}>등록된 일정이 없습니다.</Text>
+        )}
+        </View>
+        {/* 캘린더 */}
+        <Calendar
+          current={new Date().toISOString().split("T")[0]}
+          markedDates={markedDates}
+          markingType="custom" // 기본 점 표시로 변경
+          theme={{
+            selectedDayBackgroundColor: "#00adf5",
+            todayTextColor: "#00adf5",
+            arrowColor: "orange",
+          }}
+        />
       </ScrollView>
-
+      
+      {/* 모달 창 */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -313,9 +341,18 @@ export default function ScheduleScreen() {
             <Text style={styles.modalTitle}>새 일정 등록</Text>
             <TextInput
               style={styles.modalInput}
-              placeholder="예) 식단하기, 운동하기"
-              value={scheduleContent}
-              onChangeText={setScheduleContent}
+              placeholder="일정 내용을 입력하세요"
+              value={newScheduleContent}
+              onChangeText={setNewScheduleContent}
+            />
+            <Text style={styles.modalLabel}>시간 선택</Text>
+            <DateTimePicker
+              value={selectedTime}
+              mode="time"
+              display="default"
+              onChange={(event, date) => {
+                if (date) setSelectedTime(date);
+              }}
             />
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -328,7 +365,7 @@ export default function ScheduleScreen() {
                 style={[styles.modalButton, styles.addConfirmButton]}
                 onPress={registerSchedule}
               >
-                <Text style={styles.modalButtonText}>추가</Text>
+                <Text style={styles.modalButtonText}>등록</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -341,14 +378,8 @@ export default function ScheduleScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#b7d6bb",
+    backgroundColor: "#f5f5f5",
     padding: 16,
-  },
-  screenTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 16,
-    textAlign: 'center',
   },
   goalSection: {
     backgroundColor: "#fff",
@@ -365,65 +396,88 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   goalText: {
     fontSize: 16,
     color: "#333",
-    textAlign: 'center',
+    textAlign: "center",
   },
-  addButton: {
-    position: "absolute",
-    right: 20,
-    bottom: 40,
-    backgroundColor: "#FF6961",
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  addButtonText: {
-    fontSize: 36,
-    color: "#fff",
-    lineHeight: 36,
-  },
-  registeredList: {
-    marginBottom: 100,
-  },
-  registeredContainer: {
+  section: {
     backgroundColor: "#fff",
-    padding: 12,
     borderRadius: 10,
+    padding: 16,
     marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
   },
-  registeredText: {
-    fontSize: 16,
-    color: "#333",
-    marginBottom: 4,
-    textAlign: 'center',
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
   },
-  checkButton: {
-    alignSelf: "flex-end",
-    backgroundColor: "#4CAF50",
-    borderRadius: 5,
-    paddingVertical: 6,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  addButton: {
+    backgroundColor: "#b7d6bb",
+    borderRadius: 20,
     paddingHorizontal: 12,
-    marginTop: 8,
+    paddingVertical: 6,
   },
-  checkButtonText: {
+  addButtonText: {
+    fontSize: 18,
     color: "#fff",
     fontWeight: "bold",
+  },
+  scheduleItem: {
+    flexDirection: "row", // 가로 정렬
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#f9f9f9",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  scheduleContent: {
+    fontSize: 16,
+    color: "#333",
+    flex: 1, 
+  },
+  scheduleProgress: {
+    fontSize: 14,
+    color: "#666",
+    marginRight: 10,
+  },
+  checkButton: {
+    backgroundColor: "#b7d6bb",
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  checkButtonDisabled: {
+    backgroundColor: "#ccc",
+  },
+  checkButtonText: {
+    fontSize: 16,
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  noSchedulesText: {
+    fontSize: 16,
+    color: "#999",
+    textAlign: "center",
+    marginTop: 8,
   },
   modalOverlay: {
     flex: 1,
@@ -455,6 +509,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 20,
   },
+  modalLabel: {
+    fontSize: 16,
+    marginBottom: 8,
+  },
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -470,7 +528,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ccc",
   },
   addConfirmButton: {
-    backgroundColor: "#FF6961",
+    backgroundColor: "#4CAF50",
   },
   modalButtonText: {
     color: "#fff",

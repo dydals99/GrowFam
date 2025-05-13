@@ -26,77 +26,65 @@ const MeasureList = () => {
   const [error, setError] = useState<string | null>(null); // 에러 상태
   const router = useRouter();
 
-  useEffect(() => {
-    const fetchFamilyData = async () => {
-      try {
-        // JWT 토큰 가져오기
-        const token = await AsyncStorage.getItem("access_token");
-        if (!token) {
-          console.log("JWT 토큰이 없습니다. 로그인 화면으로 이동합니다.");
-          router.replace("./users/login");
-          return;
-        }
-
-        // 사용자 정보 가져오기
-        const userResponse = await fetch(`${API_URL}/users/me`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!userResponse.ok) {
-          console.error("사용자 정보를 가져오는데 실패했습니다.");
-          if (userResponse.status === 401) {
-            console.log("토큰이 유효하지 않거나 만료되었습니다. 로그인 화면으로 이동합니다.");
-            router.replace("./users/login");
-          }
-          return;
-        }
-
-        const userData = await userResponse.json();
-        const user_no = userData.user_no;
-
-        // 가족 정보 가져오기
-        const familyResponse = await fetch(`${API_URL}/users/family/${user_no}`);
-        if (!familyResponse.ok) {
-          console.error("가족 정보를 가져오는데 실패했습니다.");
-          return;
-        }
-
-        const familyData = await familyResponse.json();
-        const family_no = familyData.family_no;
-
-        // 키 측정 데이터 가져오기
-        const measureResponse = await fetch(`${API_URL}/measure/height?family_no=${family_no}`);
-        if (!measureResponse.ok) {
-          throw new Error("키 측정 데이터를 가져오는데 실패했습니다.");
-        }
-
-        const measureData = await measureResponse.json();
-        const validData = measureData.filter((item: MeasureData) => {
-          return item.measure_height && !isNaN(parseFloat(item.measure_height));
-        });
-        setData(validData);
-
-        // 아이 정보 가져오기
-        const kidInfoResponse = await fetch(`${API_URL}/measure/kid-info?family_no=${family_no}`);
-        if (!kidInfoResponse.ok) {
-          throw new Error("아이 정보를 가져오는데 실패했습니다.");
-        }
-
-        const kidInfoData = await kidInfoResponse.json();
-        setKids(kidInfoData);
-      } catch (error) {
-        console.error(error);
-        setError("데이터를 불러오는 중 오류가 발생했습니다.");
-      } finally {
-        setLoading(false); // 로딩 상태 해제
+useEffect(() => {
+  const fetchFamilyData = async () => {
+    try {
+      // JWT 토큰 가져오기
+      const token = await AsyncStorage.getItem("access_token");
+      if (!token) {
+        console.log("JWT 토큰이 없습니다. 로그인 화면으로 이동합니다.");
+        router.replace("./users/login");
+        return;
       }
-    };
 
-    fetchFamilyData();
-  }, []);
+      // AsyncStorage에서 user_no 가져오기
+      const userNo = await AsyncStorage.getItem("user_no");
+      if (!userNo) {
+        console.log("사용자 번호를 찾을 수 없습니다. 로그인 화면으로 이동합니다.");
+        router.replace("./users/login");
+        return;
+      }
+
+      // 가족 정보 가져오기
+      const familyResponse = await fetch(`${API_URL}/users/family/${userNo}`);
+      if (!familyResponse.ok) {
+        console.error("가족 정보를 가져오는데 실패했습니다.");
+        return;
+      }
+
+      const familyData = await familyResponse.json();
+      const family_no = familyData.family_no;
+
+      // 키 측정 데이터 가져오기
+      const measureResponse = await fetch(`${API_URL}/measure/height?family_no=${family_no}`);
+      if (!measureResponse.ok) {
+        throw new Error("키 측정 데이터를 가져오는데 실패했습니다.");
+      }
+
+      const measureData = await measureResponse.json();
+      const validData = measureData.filter((item: MeasureData) => {
+        return item.measure_height && !isNaN(parseFloat(item.measure_height));
+      });
+      setData(validData);
+
+      // 아이 정보 가져오기
+      const kidInfoResponse = await fetch(`${API_URL}/measure/kid-info?family_no=${family_no}`);
+      if (!kidInfoResponse.ok) {
+        throw new Error("아이 정보를 가져오는데 실패했습니다.");
+      }
+
+      const kidInfoData = await kidInfoResponse.json();
+      setKids(kidInfoData);
+    } catch (error) {
+      console.error(error);
+      setError("데이터를 불러오는 중 오류가 발생했습니다.");
+    } finally {
+      setLoading(false); // 로딩 상태 해제
+    }
+  };
+
+  fetchFamilyData();
+}, []);
   if (loading) {
     return (
       <View style={styles.container}>

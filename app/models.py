@@ -103,3 +103,9 @@ class ScheduleCheck(Base):
     schedule_no = Column(Integer, ForeignKey("tb_schedule.schedule_no"), primary_key=True)
     schedule_check_count = Column(Integer, default=0)
     schedule_check_date = Column(DateTime, nullable=True)  # 마지막 체크 날짜 추가
+
+class ScheduleCheckLog(Base):
+    __tablename__ = "tb_schedule_check_log"
+    schedule_check_date_log_no = Column(Integer, primary_key=True, index=True)
+    family_no = Column(Integer, ForeignKey("tb_family.family_no"), nullable=False)
+    schedule_check_date_log = Column(DateTime, nullable=False) 

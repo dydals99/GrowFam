@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, Switch } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { API_URL } from '../../../constants/config';
@@ -7,14 +7,29 @@ import { API_URL } from '../../../constants/config';
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isAutoLogin, setIsAutoLogin] = useState(false); // 자동 로그인 상태
   const router = useRouter();
 
+  // 앱 실행 시 자동 로그인 처리
+  useEffect(() => {
+    (async () => {
+      const autoLogin = await AsyncStorage.getItem('auto_login');
+      if (autoLogin === 'true') {
+        const token = await AsyncStorage.getItem('access_token');
+        const userNo = await AsyncStorage.getItem('user_no');
+        if (token && userNo) {
+          console.log('자동 로그인 성공:', userNo);
+          router.push('/'); // 홈 화면으로 이동
+        }
+      }
+    })();
+  }, []);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', '아이디 혹은 비밀번호가 틀렸습니다.');
-      return;
-    }
+  if (!email || !password) {
+    Alert.alert('Error', '아이디 혹은 비밀번호가 틀렸습니다.');
+    return;
+  }
 
     try {
       const response = await fetch(`${API_URL}/users/login`, {
@@ -30,7 +45,22 @@ export default function LoginScreen() {
       }
 
       const data = await response.json();
+      console.log('Login API Response:', data); // 응답 데이터 확인
+
+      if (!data.user_no) {
+        console.error('user_no is missing in the API response');
+        Alert.alert('Error', '로그인 응답에 문제가 있습니다.');
+        return;
+      }
+
       await AsyncStorage.setItem('access_token', data.access_token); // JWT 토큰 저장
+      await AsyncStorage.setItem('user_no', data.user_no.toString()); // user_no 저장
+
+      if (isAutoLogin) {
+        await AsyncStorage.setItem('auto_login', 'true'); // 자동 로그인 상태 저장
+      } else {
+        await AsyncStorage.removeItem('auto_login'); // 자동 로그인 상태 제거
+      }
 
       Alert.alert('Success', 'Login successful!');
       router.push('/'); // 올바른 경로로 수정
@@ -48,8 +78,8 @@ export default function LoginScreen() {
       />
 
       {/* 제목 */}
-      <Text style={styles.title}>Welcome GlowFam</Text>
-      <Text style={styles.subtitle}>Sign to continue</Text>
+      <Text style={styles.title}>GrowFam</Text>
+      <Text style={styles.subtitle}>로그인 후 이용가능</Text>
 
       {/* 이메일 입력 */}
       <TextInput
@@ -72,16 +102,25 @@ export default function LoginScreen() {
         placeholderTextColor="#aaa"
       />
 
+      {/* 자동 로그인 스위치 */}
+      <View style={styles.checkboxContainer}>
+        <Switch
+          value={isAutoLogin}
+          onValueChange={setIsAutoLogin}
+        />
+        <Text style={styles.checkboxLabel}>자동 로그인</Text>
+      </View>
+
       {/* 로그인 버튼 */}
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>LOGIN</Text>
+        <Text style={styles.buttonText}>로그인</Text>
       </TouchableOpacity>
 
       {/* 하단 링크 */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Don't have an account? </Text>
+        <Text style={styles.footerText}>계정이 없으신가요? </Text>
         <TouchableOpacity onPress={() => router.push('./regist')}>
-          <Text style={styles.footerLink}>create a new account</Text>
+          <Text style={styles.footerLink}>회원가입</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -123,6 +162,16 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     backgroundColor: '#f9f9f9',
     fontSize: 14,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  checkboxLabel: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#333',
   },
   button: {
     width: '100%',

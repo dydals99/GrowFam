@@ -83,6 +83,13 @@ class ScheduleCheckRead(BaseModel):
     class Config:
         from_attributes = True
 
+class ScheduleCheckLogResponse(BaseModel):
+    schedule_check_date_log_no: int
+    family_no: int
+    schedule_check_date_log: datetime
+
+    class Config:
+        from_attributes = True
 
 # User 관련 클래스
 class UserCreate(BaseModel):

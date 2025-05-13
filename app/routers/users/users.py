@@ -24,7 +24,7 @@ router = APIRouter(
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# 이메일 인증 코드 저장소 (임시)
+# 이메일 인증 코드 저장소
 email_verification_codes = {}
 
 class NicknameRequest(BaseModel):
@@ -41,6 +41,11 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+class UpdateUserInfoRequest(BaseModel):
+    user_no: int
+    field: str
+    value: str
+
 # 이메일 전송 함수
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
@@ -49,7 +54,7 @@ EMAIL_PASSWORD = "jelu brbu lnuq otnh"  # Gmail 앱 비밀번호로 업데이트
 
 def send_email(to_email: str, code: str):
     try:
-        subject = "GlowFam 인증코드"
+        subject = "GrowFam 인증코드"
         body = f"안녕하세요 당신의 인증코드는 : {code}"
 
         msg = MIMEText(body)
@@ -168,30 +173,56 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
         data={"sub": user.user_email, "user_no": user_no},  # user_no 포함
         expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_no": user_no  # user_no 추가
+    }
 
-@router.get("/me")
-def get_current_user_info(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
-    # 디버깅 로그 추가
-    
-    print(f"Decoded current user: {current_user}")
-
-    # user_no를 사용하여 user_nickname 가져오기
-    user_no = current_user.get("user_no")
+@router.get("/user-info/{user_no}")
+def get_user_info(user_no: int, db: Session = Depends(get_db)):
+    """
+    user_no를 기반으로 사용자 정보를 반환하는 API
+    """
     user = db.query(User).filter(User.user_no == user_no).first()
-    
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    return {"user_no": user.user_no, "email": current_user.get("sub"), "nickname": user.user_nickname, "username":user.user_name, "profileImage" : user.user_profile}
+    return {
+        "user_no": user.user_no,
+        "email": user.user_email,
+        "nickname": user.user_nickname,
+        "username": user.user_name,
+        "profileImage": user.user_profile
+    }
 
-@router.get("/family/{user_no}")
-def get_family_no(user_no: int, db: Session = Depends(get_db)):
-    # tb_users와 tb_family를 조인하여 family_no를 가져옴
-    family_no = db.query(Family.family_no).join(User, User.user_no == Family.user_no).filter(User.user_no == user_no).scalar()
-    if not family_no:
-        raise HTTPException(status_code=404, detail="Family not found for the given user_no")
-    return {"family_no": family_no}
+@router.post("/update-user-info")
+def update_user_info(request: UpdateUserInfoRequest, db: Session = Depends(get_db)):
+    """
+    사용자 정보를 동적으로 업데이트하는 API
+    """
+    valid_fields = {"username": "user_name", "nickname": "user_nickname", "email": "user_email", "password": "user_password"}
+    
+    # 유효한 필드인지 확인
+    if request.field not in valid_fields:
+        raise HTTPException(status_code=400, detail="Invalid field")
+
+    # 사용자 조회
+    user = db.query(User).filter(User.user_no == request.user_no).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # 비밀번호 필드 처리
+    if request.field == "password":
+        hashed_password = pwd_context.hash(request.value)  # 비밀번호 암호화
+        setattr(user, valid_fields[request.field], hashed_password)
+    else:
+        # 다른 필드 처리
+        setattr(user, valid_fields[request.field], request.value)
+
+    db.commit()
+
+    return {"success": True, "message": f"{request.field.capitalize()} updated successfully"}
 
 @router.post("/update-profile-image")
 def update_profile_image(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db), file: UploadFile = File(...)):
@@ -212,6 +243,14 @@ def update_profile_image(current_user: dict = Depends(get_current_user), db: Ses
 
     return {"success": True, "message": "Profile image updated successfully", "profileImage": file_location}
 
+@router.get("/family/{user_no}")
+def get_family_info(user_no: int, db: Session = Depends(get_db)):
+    
+    family = db.query(Family).filter(Family.user_no == user_no).first()
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
 
-
-
+    return {
+        "family_no": family.family_no,
+        "family_nickname": family.family_nickname
+    }

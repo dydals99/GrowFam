@@ -5,9 +5,8 @@ from sqlalchemy.orm import Session
 from datetime import datetime, date
 from pydantic import BaseModel
 from app.database import get_db 
-from app.models import Schedule, ScheduleCheck
-from app.models import FamilyMonthGoals
-
+from app.models import Schedule, ScheduleCheck, FamilyMonthGoals,ScheduleCheckLog
+from app.schemas import ScheduleCheckLogResponse
 
 router = APIRouter(
     prefix="/schedule",
@@ -95,8 +94,9 @@ def update_schedule_check(
     db: Session = Depends(get_db)
 ):
     schedule_check = db.query(ScheduleCheck).filter(ScheduleCheck.schedule_no == schedule_no).first()
+    schedule = db.query(Schedule).filter(Schedule.schedule_no == schedule_no).first()
 
-    if not schedule_check:
+    if not schedule_check or not schedule:
         raise HTTPException(status_code=404, detail="해당 일정이 존재하지 않습니다.")
 
     today = date.today()
@@ -108,6 +108,14 @@ def update_schedule_check(
     # 체크 업데이트
     schedule_check.schedule_check_count += increment
     schedule_check.schedule_check_date = today  # 마지막 체크 날짜 업데이트
+
+    # tb_schedule_check_log에 기록 추가
+    new_log = ScheduleCheckLog(
+        family_no=schedule.family_no,
+        schedule_check_date_log=today
+    )
+    db.add(new_log)
+
     db.commit()
     db.refresh(schedule_check)
 
@@ -115,5 +123,25 @@ def update_schedule_check(
         "schedule_no": schedule_no,
         "schedule_check_count": schedule_check.schedule_check_count,
     }
-
+    
+@router.get("/check-logs/{family_no}", response_model=List[ScheduleCheckLogResponse])
+def get_schedule_check_logs(family_no: int, db: Session = Depends(get_db)):
+    
+    logs = (
+        db.query(ScheduleCheckLog)
+        .filter(ScheduleCheckLog.family_no == family_no)
+        .all()
+    )
+    if not logs:
+        raise HTTPException(status_code=404, detail="체크 로그를 찾을 수 없습니다.")
+    
+    # 반환 데이터 확인
+    return [
+        {
+            "family_no": log.family_no,
+            "schedule_check_date_log": log.schedule_check_date_log,
+            "schedule_check_date_log_no": log.schedule_check_date_log_no,
+        }
+        for log in logs
+    ]
 
