@@ -12,3 +12,6 @@ models
 
 yolov8n
 yolov8s
+
+app/routers/measure/height_weight_data.xlsx
+

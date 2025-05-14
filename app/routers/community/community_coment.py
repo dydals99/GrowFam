@@ -1,3 +1,4 @@
+import datetime
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -68,33 +69,23 @@ def get_coments(community_no: int, db: Session = Depends(get_db)):
 def get_coments_root(community_no: int, db: Session = Depends(get_db)):
     return get_coments(community_no, db)
 
-@router.put("/{coment_no}", response_model=schemas.CommunityComentOut)
-def update_coment(coment_no: int, coment: schemas.CommunityComentUpdate, db: Session = Depends(get_db)):
-    print(f"Received coment_no: {coment_no}")
-    db_coment = db.query(models.CommunityComent).filter(models.CommunityComent.coment_no == coment_no).first()
-    if not db_coment:
-        raise HTTPException(status_code=404, detail="Coment not found")
-    for key, value in coment.dict(exclude_unset=True).items():
-        setattr(db_coment, key, value)
+@router.put("/{coment_no}", response_model=schemas.ComentResponse)
+def update_coment(coment_no: int, request: schemas.ComentUpdateRequest, db: Session = Depends(get_db)):
+    coment = db.query(models.CommunityComent).filter(models.CommunityComent.coment_no == coment_no).first()
+    if not coment:
+        raise HTTPException(status_code=404, detail="댓글을 찾을 수 없습니다.")
+
+    coment.coment_content = request.coment_content
+    coment.coment_regist_at = datetime.datetime.now(datetime.timezone.utc)  # 시간대 정보 포함
     db.commit()
-    db.refresh(db_coment)
-
-    user_nickname = (
-        db.query(models.User.user_nickname)
-        .filter(models.User.user_no == db_coment.user_no)
-        .scalar()
-    )
-
-    if not user_nickname:
-        raise HTTPException(status_code=404, detail="User not found")
+    db.refresh(coment)
 
     return {
-        "coment_no": db_coment.coment_no,
-        "coment_content": db_coment.coment_content,
-        "coment_at": db_coment.coment_regist_at,
-        "community_no": db_coment.community_no,
-        "user_no": db_coment.user_no,
-        "user_nickname": user_nickname,
+        "coment_no": coment.coment_no,
+        "coment_content": coment.coment_content,
+        "coment_regist_at": coment.coment_regist_at.isoformat(),
+        "user_no": coment.user_no,
+        "community_no": coment.community_no,
     }
 
 @router.get("/counts", response_model=dict)

@@ -78,21 +78,21 @@ const GlowFamScreen: React.FC = () => {
 
   const renderItem = ({ item }: { item: FamilyData }) => (
     <View style={styles.rowContainer}>
-      {/* 가족 닉네임 */}
+      {/* 닉네임 */}
       <Text style={styles.familyName}>{item.family_nickname}</Text>
 
-      {/* 프로그레스 바 */}
-      <View style={styles.progressBarBackground}>
-        <View 
-          style={[
-            styles.progressBarFill, 
-            { width: `${item.progress}%` }
-          ]} 
-        />
+      {/* 프로그레스 바와 퍼센트 */}
+      <View style={styles.progressRow}>
+        <View style={styles.progressBarBackground}>
+          <View
+            style={[
+              styles.progressBarFill,
+              { width: `${item.progress}%` },
+            ]}
+          />
+        </View>
+        <Text style={styles.percentText}>{item.progress}%</Text>
       </View>
-
-      {/* 퍼센트 */}
-      <Text style={styles.percentText}>{item.progress}%</Text>
     </View>
   );
 
@@ -129,7 +129,7 @@ const GlowFamScreen: React.FC = () => {
                   />
                 </View>
                 <Text style={styles.familyGoalCount}>
-                  {goal.completedCount} of {goal.totalCount}
+                  {goal.completedCount}/{goal.totalCount}
                 </Text>
               </View>
             </View>
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#58a',
+    color: '#b7d6bb',
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -171,39 +171,45 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 20,
-    paddingTop: 20, // 목록을 아래로 이동
+    paddingTop: 20, 
   },
   rowContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center', // 전체 요소를 중앙 정렬
+    flexDirection: 'column', 
+    alignItems: 'flex-start', 
+    justifyContent: 'center',
     marginBottom: 15,
   },
   familyName: {
-    width: 160, // 글씨 위치를 안쪽으로 모으기
     fontSize: 16,
     color: '#555',
-    textAlign: 'right',
-    marginRight: 10, // 오른쪽 간격 조정
+    textAlign: 'left', // 닉네임 좌측 정렬
+    marginBottom: 10, // 닉네임과 프로그레스 바 간격 추가
+    marginLeft: 10,
+  },
+  progressRow: {
+    flexDirection: 'row', // 가로 정렬
+    alignItems: 'center', // 세로 중앙 정렬
+    width: '100%',
   },
   progressBarBackground: {
-    width: 150, // 그래프 크기 고정
-    height: 10,
-    backgroundColor: '#e0f2f1', 
+    flex: 1, // 프로그래스 바가 가능한 넓게 차지하도록 설정
+    height: 15,
+    backgroundColor: '#e0e0e0',
     borderRadius: 5,
-    marginHorizontal: 10, // 양쪽 여백 추가
+    
+    marginLeft: 15, // 퍼센트와 간격 추가
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#9de5dc', // 진행도 색상
+    backgroundColor: '#b7d6bb',
     borderRadius: 5,
   },
   percentText: {
-    width: 100, // 오른쪽 텍스트도 안쪽으로 정렬
-    textAlign: 'left',
-    fontSize: 16,
+    fontSize: 14,
     color: '#333',
-    marginLeft: 10, // 왼쪽 간격 조정
+    width: 55,
+    textAlign: 'right', // 퍼센트 우측 정렬
+    marginRight: 10,
   },
   goalsContainer: {
     backgroundColor: "#fff",
@@ -274,16 +280,15 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   familyProgressBarBackground: {
-    flex: 1,
-    height: 10,
-    backgroundColor: "#e0e0e0",
+    width: 270, 
+    height: 15,
+    backgroundColor: '#e0e0e0', 
     borderRadius: 5,
-    overflow: "hidden",
-    marginVertical: 10,
+    marginHorizontal: 10, 
   },
   familyProgressBarFill: {
     height: "100%",
-    backgroundColor: "#76c7c0",
+    backgroundColor: "#b7d6bb",
   },
   familyNoGoalsText: {
     fontSize: 16,

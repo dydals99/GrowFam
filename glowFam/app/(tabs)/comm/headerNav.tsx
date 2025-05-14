@@ -1,18 +1,57 @@
 import React, { useEffect, useState } from "react";
 import { View, TouchableOpacity, Text, StyleSheet, Image, Alert } from "react-native";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_URL } from "../../../constants/config";
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 const HeaderNav: React.FC = () => {
   const router = useRouter();
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProfileImage = async () => {
+      try {
+        const userNo = await AsyncStorage.getItem("user_no");
+        if (!userNo) {
+          console.log("user_no가 없습니다. 로그인 화면으로 이동합니다.");
+          router.replace("../users/login");
+          return;
+        }
+
+        const response = await fetch(`${API_URL}/users/user-info/${userNo}`);
+        if (!response.ok) {
+          console.error("프로필 이미지를 가져오는데 실패했습니다.");
+          return;
+        }
+
+        const data = await response.json();
+        if (data.profileImage) {
+          setProfileImage(`${API_URL}/${data.profileImage}`); 
+        } else {
+          setProfileImage(null); 
+        }
+      } catch (error) {
+        console.error("프로필 이미지를 가져오는 중 오류 발생:", error);
+      }
+    };
+
+    fetchProfileImage();
+  }, []);
 
   return (
     <View style={styles.header}>
-       {/* 프로필 이미지 */}
-       <TouchableOpacity
+      {/* 프로필 이미지 */}
+      <TouchableOpacity
         style={styles.profileSection}
-        onPress={() => router.push("../users/userProfile")}> 
+        onPress={() => router.push("../users/userProfile")}
+      >
         <Image
-          source={require("../../../assets/images/다운로드.jpg")} // 기본 프로필 이미지 설정
+          source={
+            profileImage
+              ? { uri: profileImage }
+              : require("../../../assets/images/다운로드.jpg") 
+          }
           style={styles.profileImage}
         />
       </TouchableOpacity>
@@ -21,8 +60,11 @@ const HeaderNav: React.FC = () => {
       <Text style={styles.headerTitle}>메인 화면</Text>
 
       {/* 📷 카메라 버튼 */}
-      <TouchableOpacity style={styles.cameraButton} onPress={() => router.push("/measure/measure_list")}>
-        <Text style={styles.cameraIcon}>📷</Text>
+      <TouchableOpacity
+        style={styles.cameraButton}
+        onPress={() => router.push("/measure/camera")}
+      >
+        <Text style={styles.cameraIcon}><FontAwesome5 name="ruler-vertical" size={24} color="black" /></Text>
       </TouchableOpacity>
     </View>
   );

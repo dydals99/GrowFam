@@ -14,32 +14,17 @@ export default function CommunityWrite() {
   useEffect(() => {
     const fetchUserNo = async () => {
       try {
-        const token = await AsyncStorage.getItem('access_token'); 
-        if (!token) {
-          Alert.alert('로그인이 필요합니다.');
-          router.replace('/users/login'); 
+        const userNo = await AsyncStorage.getItem("user_no"); // AsyncStorage에서 user_no 가져오기
+        if (!userNo) {
+          Alert.alert("로그인이 필요합니다.");
+          router.replace("/users/login"); // 로그인 화면으로 이동
           return;
         }
 
-        // 사용자 정보 요청
-        const response = await fetch(`${API_URL}/users/me`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          console.error('사용자 정보를 가져오는데 실패했습니다.');
-          Alert.alert('사용자 정보를 가져오는 중 오류가 발생했습니다.');
-          return;
-        }
-
-        const userData = await response.json();
-        setUserNo(userData.user_no);
+        setUserNo(Number(userNo)); // userNo를 상태로 설정
       } catch (error) {
-        console.error('오류 발생:', error);
-        Alert.alert('로그인 정보를 가져오는 중 오류가 발생했습니다.');
+        console.error("오류 발생:", error);
+        Alert.alert("사용자 정보를 가져오는 중 오류가 발생했습니다.");
       }
     };
 

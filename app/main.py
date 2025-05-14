@@ -11,8 +11,9 @@ from app.routers.schedule.schedule import router as schedule_router
 from app.routers.schedule.graph import router as graph_router
 from app.routers.users.users import router as users_router
 from app.routers.users.family import router as family_router
-from app.routers.measure.act_measure import router as act_measure
-from app.routers.measure.measure import router as measure
+from app.routers.measure.act_measure import router as act_measure_router
+from app.routers.measure.measure import router as measure_router
+from app.routers.measure.compare_avg import router as compare_avg_router
 import os
 
 load_dotenv()
@@ -42,8 +43,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 # 라우터 추가
-app.include_router(act_measure)
-app.include_router(measure)
+app.include_router(act_measure_router)
+app.include_router(measure_router)
+app.include_router(compare_avg_router)
 app.include_router(community_router)
 app.include_router(community_like_router)
 app.include_router(schedule_router)

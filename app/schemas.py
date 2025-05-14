@@ -58,6 +58,19 @@ class CommunityComentOut(CommunityComentBase):
 
     class Config:
         from_attributes = True
+        
+class ComentUpdateRequest(BaseModel):
+    coment_content: str
+
+class ComentResponse(BaseModel):
+    coment_no: int
+    coment_content: str
+    coment_regist_at: str
+    user_no: int
+    community_no: int
+
+    class Config:
+        from_attributes = True
 
 # Schedule 관련 클래스
 class ScheduleCreate(BaseModel):
@@ -84,9 +97,9 @@ class ScheduleCheckRead(BaseModel):
         from_attributes = True
 
 class ScheduleCheckLogResponse(BaseModel):
-    schedule_check_date_log_no: int
     family_no: int
-    schedule_check_date_log: datetime
+    schedule_check_date_log: Optional[datetime]  # None 값을 허용
+    schedule_check_date_log_no: int
 
     class Config:
         from_attributes = True
@@ -145,3 +158,8 @@ class KidInfo(KidInfoBase):
 
     class Config:
         from_attributes = True
+
+class CompareRequest(BaseModel):
+    age: int
+    height: float
+    weight: float

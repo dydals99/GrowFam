@@ -108,4 +108,4 @@ class ScheduleCheckLog(Base):
     __tablename__ = "tb_schedule_check_log"
     schedule_check_date_log_no = Column(Integer, primary_key=True, index=True)
     family_no = Column(Integer, ForeignKey("tb_family.family_no"), nullable=False)
-    schedule_check_date_log = Column(DateTime, nullable=False) 
+    schedule_check_date_log = Column(DateTime, nullable=True) 

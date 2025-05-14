@@ -69,6 +69,14 @@ def create_schedule(schedule_data: ScheduleCreate, db: Session = Depends(get_db)
         db.add(new_schedule_check)
         db.commit()
 
+        # tb_schedule_check_log에 기본 로그 추가
+        new_schedule_check_log = ScheduleCheckLog(
+            family_no=schedule_data.family_no,
+            
+        )
+        db.add(new_schedule_check_log)
+        db.commit()
+
         return {
             "scheduleNo": new_schedule.schedule_no,
             "scheduleContent": new_schedule.schedule_cotents,
@@ -126,7 +134,6 @@ def update_schedule_check(
     
 @router.get("/check-logs/{family_no}", response_model=List[ScheduleCheckLogResponse])
 def get_schedule_check_logs(family_no: int, db: Session = Depends(get_db)):
-    
     logs = (
         db.query(ScheduleCheckLog)
         .filter(ScheduleCheckLog.family_no == family_no)
@@ -139,7 +146,7 @@ def get_schedule_check_logs(family_no: int, db: Session = Depends(get_db)):
     return [
         {
             "family_no": log.family_no,
-            "schedule_check_date_log": log.schedule_check_date_log,
+            "schedule_check_date_log": log.schedule_check_date_log,  # None 값 허용
             "schedule_check_date_log_no": log.schedule_check_date_log_no,
         }
         for log in logs

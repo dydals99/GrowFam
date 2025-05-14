@@ -22,32 +22,38 @@ const CommunityComentEdit = () => {
   }, [coment_content]);
 
   const handleUpdateComent = async () => {
-    if (!updatedComent.trim()) {
-      Alert.alert('오류', '댓글 내용을 입력하세요.');
-      return;
-    }
+  if (!updatedComent.trim()) {
+    Alert.alert('오류', '댓글 내용을 입력하세요.');
+    return;
+  }
 
     try {
       const res = await fetch(`${API_URL}/coments/${coment_no}`, {
-        method: 'PUT',
+        method: 'PUT', // FastAPI 엔드포인트와 일치하는 메서드 사용
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           coment_content: updatedComent,
-          coment_at: new Date().toISOString(),
         }),
       });
 
       if (res.ok) {
-        const updatedData = await res.json(); 
+        const updatedData = await res.json();
+        
         Alert.alert('성공', '댓글이 수정되었습니다.', [
           {
             text: '확인',
             onPress: () =>
               router.push({
-                pathname: './communityComent',
-                params: { communityNo: community_no, userNo: user_no }, 
+                pathname: '/community/communityComent',
+                params: {
+                communityNo: updatedData.community_no,
+                userNo: updatedData.user_no,
+                comentNo: updatedData.coment_no,
+                comentContent: updatedData.coment_content,
+                
+              },
               }),
           },
         ]);
