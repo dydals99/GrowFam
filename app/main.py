@@ -15,6 +15,8 @@ from app.routers.measure.act_measure import router as act_measure_router
 from app.routers.measure.measure import router as measure_router
 from app.routers.measure.compare_avg import router as compare_avg_router
 import os
+import asyncio
+
 
 load_dotenv()
 
@@ -23,8 +25,10 @@ async def lifespan(app: FastAPI):
     print("Starting application...")
     try:
         yield
+    except asyncio.CancelledError:
+        print("Application shutdown interrupted.")
     finally:
-        print("Shutting down application...")
+        print("Application shutdown complete.")
 
 app = FastAPI(title="GrowFarm Community API", lifespan=lifespan)
 

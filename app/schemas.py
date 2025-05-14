@@ -1,5 +1,5 @@
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from datetime import datetime
 
 
@@ -113,6 +113,26 @@ class UserCreate(BaseModel):
 
     class Config:
         from_attributes = True
+
+class NicknameRequest(BaseModel):
+    nickname: str
+
+class EmailVerificationRequest(BaseModel):
+    email: EmailStr
+
+class EmailVerificationConfirmRequest(BaseModel):
+    email: EmailStr
+    code: str
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class UpdateUserInfoRequest(BaseModel):
+    user_no: int
+    field: str
+    value: str
+
 
 # Family 관련 클래스 
 class FamilyBase(BaseModel):

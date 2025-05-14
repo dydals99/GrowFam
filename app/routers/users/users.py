@@ -6,11 +6,11 @@ from app.schemas import UserCreate
 from passlib.context import CryptContext
 import random
 import string
-from pydantic import BaseModel, EmailStr
 from fastapi.responses import RedirectResponse
 import smtplib
 from email.mime.text import MIMEText
 from app.utils import create_access_token, get_current_user
+from app.schemas import NicknameRequest, EmailVerificationRequest, EmailVerificationConfirmRequest, LoginRequest, UpdateUserInfoRequest
 from datetime import timedelta
 import shutil
 
@@ -26,25 +26,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # 이메일 인증 코드 저장소
 email_verification_codes = {}
-
-class NicknameRequest(BaseModel):
-    nickname: str
-
-class EmailVerificationRequest(BaseModel):
-    email: EmailStr
-
-class EmailVerificationConfirmRequest(BaseModel):
-    email: EmailStr
-    code: str
-
-class LoginRequest(BaseModel):
-    email: str
-    password: str
-
-class UpdateUserInfoRequest(BaseModel):
-    user_no: int
-    field: str
-    value: str
 
 # 이메일 전송 함수
 SMTP_SERVER = "smtp.gmail.com"
