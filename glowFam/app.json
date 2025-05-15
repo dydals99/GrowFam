@@ -10,20 +10,14 @@
     "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "com.app.glowFam",
-      "bundelNumber": "1.0.0",
+      "buildNumber": "1.0.0",
       "supportsTablet": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "adaptiveIcon": {
-        "package": "com.app.glowFam",
-        "vaesionCode": 1,
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "package": "com.app.glowFam"
+      
     },
     "web": {
       "bundler": "metro",

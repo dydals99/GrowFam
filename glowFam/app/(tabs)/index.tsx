@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Alert,
+  Button,
 } from "react-native";
 import HeaderNav from "./comm/headerNav";
 import { API_URL } from "../../constants/config";
@@ -99,6 +100,51 @@ const MeasureList = () => {
     fetchFamilyData();
   }, []);
 
+  const handleComparison = async (kid: KidInfo) => {
+    const calculateAge = (birthday: string) => {
+      const birthDate = new Date(birthday);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age;
+    };
+
+    const age = calculateAge(kid.kid_birthday);
+
+    try {
+      const requestData = {
+        age: Math.floor(age),
+        height: parseFloat(kid.kid_height),
+        weight: parseFloat(kid.kid_weight),
+        gender: kid.kid_gender === "M" ? 1 : 2,
+      };
+
+      const response = await fetch(`${API_URL}/compare`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      if (!response.ok) {
+        throw new Error("API 호출 실패");
+      }
+
+      const result = await response.json();
+      router.push({
+        pathname: "/measure/measure_avg",
+        params: { comparisonData: JSON.stringify(result), kid: JSON.stringify(kid) },
+      });
+    } catch (error) {
+      console.error("비교 데이터를 가져오는 중 오류 발생:", error);
+      Alert.alert("오류", "비교 데이터를 가져오는 중 문제가 발생했습니다.");
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -127,89 +173,35 @@ const MeasureList = () => {
       },
     ],
   };
-  const fetchComparisonData = async (age: number, height: number, weight: number) => {
-    try {
-      const requestData = {
-        age: Math.floor(age), // 정수로 변환
-        height: parseFloat(height.toFixed(2)), // 실수로 변환
-        weight: parseFloat(weight.toFixed(2)), // 실수로 변환
-      };
-      console.log("요청 데이터:", requestData); // 요청 데이터 확인
-
-      const response = await fetch(`${API_URL}/compare`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestData),
-      });
-
-      if (!response.ok) {
-        throw new Error("API 호출 실패");
-      }
-
-      const result = await response.json();
-      console.log("비교 결과:", result); // 디버깅용
-      return result;
-    } catch (error) {
-      console.error("비교 데이터를 가져오는 중 오류 발생:", error);
-      Alert.alert("오류", "비교 데이터를 가져오는 중 문제가 발생했습니다.");
-    }
-  };
 
   const KidItem = ({ item }: { item: KidInfo }) => {
-  const gender =
-    item.kid_gender === "M"
-      ? "남자"
-      : item.kid_gender === "W"
-      ? "여자"
-      : "알 수 없음";
+    const gender =
+      item.kid_gender === "M"
+        ? "남자"
+        : item.kid_gender === "W"
+        ? "여자"
+        : "알 수 없음";
 
-  const calculateAge = (birthday: string) => {
-    const birthDate = new Date(birthday);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
-  };
-
-  const age = calculateAge(item.kid_birthday);
-
-  const [comparisonData, setComparisonData] = useState<any>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const result = await fetchComparisonData(
-        age,
-        parseFloat(item.kid_height),
-        parseFloat(item.kid_weight)
-      );
-      setComparisonData(result);
+    const calculateAge = (birthday: string) => {
+      const birthDate = new Date(birthday);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age;
     };
-    fetchData();
-  }, []);
 
-  return (
+    const age = calculateAge(item.kid_birthday);
+
+    return (
       <View style={styles.kidItem}>
         <Text>성별: {gender}</Text>
         <Text>나이: {age}세</Text>
         <Text>몸무게: {item.kid_weight}kg</Text>
         <Text>키: {item.kid_height}cm</Text>
-        {comparisonData ? (
-          <>
-            <Text>평균 키: {comparisonData.averageHeight}cm</Text>
-            <Text>
-              우리 아이는 평균보다{" "}
-              {Math.abs(comparisonData.heightDifference)}cm{" "}
-              {comparisonData.heightDifference > 0 ? "더 큽니다." : "더 작습니다."}
-            </Text>
-          </>
-        ) : (
-          <Text>비교 데이터를 불러오는 중...</Text>
-        )}
+        <Button title="평균과 비교" onPress={() => handleComparison(item)} />
       </View>
     );
   };
@@ -232,7 +224,7 @@ const MeasureList = () => {
         {data.length > 0 ? (
           <MeasureChart data={chartData} />
         ) : (
-          <Text style={styles.noDataText}>키 측정 데이터가가 없습니다.</Text>
+          <Text style={styles.noDataText}>키 측정 데이터가 없습니다.</Text>
         )}
       </View>
     </SafeAreaView>

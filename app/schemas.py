@@ -183,3 +183,18 @@ class CompareRequest(BaseModel):
     age: int
     height: float
     weight: float
+    gender: int
+    
+
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate_gender
+
+    @classmethod
+    def validate_gender(cls, value):
+        if isinstance(value, str):
+            try:
+                return int(value)
+            except ValueError:
+                raise ValueError("gender 필드는 정수여야 합니다.")
+        return value

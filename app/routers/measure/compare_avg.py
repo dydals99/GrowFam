@@ -3,7 +3,6 @@ import pandas as pd
 from fastapi import APIRouter, HTTPException
 from app.schemas import CompareRequest
 
-
 router = APIRouter()
 
 # 현재 파일의 디렉토리 경로
@@ -14,50 +13,92 @@ excel_file_path = os.path.join(current_dir, "height_weight_data.xlsx")
 
 # 엑셀 데이터 읽기
 try:
-    # 특정 시트 선택 (예: "연령별 신장")
-    excel_data = pd.read_excel(excel_file_path, sheet_name="연령별 신장")
+    # 연령별 신장 데이터 처리
+    height_data = pd.read_excel(excel_file_path, sheet_name="연령별 신장")
+    height_data = height_data.dropna(subset=["만나이(세)", "성별"])
+    height_data = height_data[["만나이(세)", "성별", "신장(cm) 백분위수", "신장(cm) 표준점수"]]
+    height_data = height_data.groupby(["만나이(세)", "성별"]).mean().reset_index()
+    height_data = height_data.set_index(["만나이(세)", "성별"]).to_dict("index")
 
-    # 열 이름 출력 (디버깅용)
-    print("열 이름:", excel_data.columns)
+    # 연령별 체중 데이터 처리
+    weight_data = pd.read_excel(excel_file_path, sheet_name="연령별 체중")
+    weight_data = weight_data.dropna(subset=["만나이(세)", "성별"])
+    weight_data = weight_data[["만나이(세)", "성별", "체중(kg) 백분위수", "체중(kg) 표준점수"]]
+    weight_data = weight_data.groupby(["만나이(세)", "성별"]).mean().reset_index()
+    weight_data = weight_data.set_index(["만나이(세)", "성별"]).to_dict("index")
 
-    # 불필요한 행 제거 (예: 설명 행 제거)
-    excel_data = excel_data.dropna(subset=["만나이(세)"])  # 만나이(세)가 없는 행 제거
+    # 연령별 체질량지수(BMI) 데이터 처리
+    bmi_data = pd.read_excel(excel_file_path, sheet_name="연령별 체질량지수")
+    print("BMI 데이터 열 이름:", bmi_data.columns)  # 열 이름 출력
 
     # 필요한 열만 선택
-    excel_data = excel_data[["만나이(세)", "신장(cm) 백분위수", "신장(cm) 표준점수"]]
+    bmi_data = bmi_data.dropna(subset=["만나이(세)", "성별"])
+    bmi_data = bmi_data[["만나이(세)", "성별", "체질량지수(kg/m2) 백분위수", "체질량지수(kg/m2) 표준점수"]]
 
-    # 중복된 만나이(세) 값 처리: 평균값으로 그룹화
-    excel_data = excel_data.groupby("만나이(세)").mean().reset_index()
-
-    # 데이터 처리: 만나이(세)를 인덱스로 설정
-    age_data = excel_data.set_index("만나이(세)").to_dict("index")
+    # 데이터 그룹화 및 처리
+    bmi_data = bmi_data.groupby(["만나이(세)", "성별"]).mean().reset_index()
+    bmi_data = bmi_data.set_index(["만나이(세)", "성별"]).to_dict("index")
 
 except Exception as e:
     raise RuntimeError(f"엑셀 데이터를 읽는 중 오류가 발생했습니다: {e}")
 
 @router.post("/compare")
 def compare_kid_data(request: CompareRequest):
-    # 요청 데이터 로깅
-    print("요청 데이터:", request.dict())
+    try:
+        # 요청 데이터 로깅
+        print("요청 데이터:", request.dict())
 
-    age = request.age
-    height = request.height
-    weight = request.weight
+        age = request.age
+        height = request.height
+        weight = request.weight
+        gender = request.gender
 
-    if age not in age_data:
-        raise HTTPException(status_code=404, detail="해당 나이에 대한 데이터가 없습니다.")
+        # 입력 데이터 검증
+        if age <= 0 or height <= 0 or weight <= 0:
+            raise HTTPException(status_code=400, detail="유효하지 않은 입력 값입니다.")
 
-    # 평균 신장 가져오기
-    average_height = age_data[age]["신장(cm) 백분위수"]
+        # 나이를 개월 수로 변환
+        age_in_months = age * 12
 
-    # 아이의 키와 평균 키 비교
-    height_difference = height - average_height
+        # 개월 수에 맞는 데이터 검증
+        if (age, gender) not in height_data or (age, gender) not in weight_data or (age, gender) not in bmi_data:
+            raise HTTPException(status_code=404, detail="해당 나이와 성별에 대한 데이터가 없습니다.")
 
-    # 결과 반환
-    return {
-        "age": age,
-        "height": round(height, 1),
-        "weight": round(weight, 1),
-        "averageHeight": round(average_height, 1),
-        "heightDifference": round(height_difference, 1),
-    }
+        # 평균 신장, 체중, BMI 가져오기
+        average_height = height_data[(age, gender)]["신장(cm) 백분위수"]
+        average_weight = weight_data[(age, gender)]["체중(kg) 백분위수"]
+        average_bmi = bmi_data[(age, gender)]["체질량지수(kg/m2) 백분위수"]
+
+        # 아이의 키, 몸무게, BMI와 평균 비교
+        height_difference = height - average_height
+        weight_difference = weight - average_weight
+        bmi = weight / ((height / 100) ** 2)  # BMI 계산
+        bmi_difference = bmi - average_bmi
+
+        # 백분위수 데이터 가져오기
+        height_percentile = height_data[(age, gender)]["신장(cm) 백분위수"]
+        weight_percentile = weight_data[(age, gender)]["체중(kg) 백분위수"]
+        bmi_percentile = bmi_data[(age, gender)]["체질량지수(kg/m2) 백분위수"]
+
+        # 결과 반환
+        return {
+            "age": age,
+            "ageInMonths": age_in_months,  # 개월 수 추가
+            "gender": "남자" if gender == 1 else "여자",
+            "height": round(height, 1),
+            "weight": round(weight, 1),
+            "bmi": round(bmi, 1),
+            "averageHeight": round(average_height, 1),
+            "averageWeight": round(average_weight, 1),
+            "averageBMI": round(average_bmi, 1),
+            "heightDifference": round(height_difference, 1),
+            "weightDifference": round(weight_difference, 1),
+            "bmiDifference": round(bmi_difference, 1),
+            "heightPercentile": round(height_percentile, 1),  # 신장 백분위수 추가
+            "weightPercentile": round(weight_percentile, 1),  # 체중 백분위수 추가
+            "bmiPercentile": round(bmi_percentile, 1),        # BMI 백분위수 추가
+        }
+    except ZeroDivisionError:
+        raise HTTPException(status_code=400, detail="키 값이 0이거나 잘못된 값입니다.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"서버 오류: {str(e)}")
