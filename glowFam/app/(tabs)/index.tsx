@@ -101,22 +101,23 @@ const MeasureList = () => {
   }, []);
 
   const handleComparison = async (kid: KidInfo) => {
-    const calculateAge = (birthday: string) => {
+    const calculateMonths = (birthday: string) => {
       const birthDate = new Date(birthday);
       const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
+      let months =
+        (today.getFullYear() - birthDate.getFullYear()) * 12 +
+        (today.getMonth() - birthDate.getMonth());
+      if (today.getDate() < birthDate.getDate()) {
+        months--;
       }
-      return age;
+      return months;
     };
 
-    const age = calculateAge(kid.kid_birthday);
+    const ageInMonths = calculateMonths(kid.kid_birthday);
 
     try {
       const requestData = {
-        age: Math.floor(age),
+        ageInMonths,
         height: parseFloat(kid.kid_height),
         weight: parseFloat(kid.kid_weight),
         gender: kid.kid_gender === "M" ? 1 : 2,

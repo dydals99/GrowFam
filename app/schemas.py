@@ -180,7 +180,7 @@ class KidInfo(KidInfoBase):
         from_attributes = True
 
 class CompareRequest(BaseModel):
-    age: int
+    ageInMonths: int
     height: float
     weight: float
     gender: int

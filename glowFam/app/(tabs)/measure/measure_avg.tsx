@@ -23,8 +23,8 @@ const MeasureAvg = () => {
         ],
         colors: [
           // 막대별 색상 설정
-          (opacity = 1) => `rgba(0, 123, 255, ${opacity})`, // 우리 아이 데이터 (진한 파란색)
-          (opacity = 1) => `rgba(200, 200, 255, ${opacity})`, // 평균 데이터 (연한 파란색)
+          (opacity = 1) => `rgba(0, 123, 255, ${opacity})`, 
+          (opacity = 1) => `rgba(200, 200, 255, ${opacity})`, 
           (opacity = 1) => `rgba(0, 123, 255, ${opacity})`,
           (opacity = 1) => `rgba(200, 200, 255, ${opacity})`,
           (opacity = 1) => `rgba(0, 123, 255, ${opacity})`,
@@ -41,7 +41,7 @@ const MeasureAvg = () => {
     backgroundGradientTo: "#ffffff",
     backgroundGradientToOpacity: 0.5,
     color: (opacity = 1) => `rgba(60, 100, 200, ${opacity})`,
-    strokeWidth: 2, // optional, default 3
+    strokeWidth: 2, 
     barPercentage: 0.5,
     
   };
@@ -49,20 +49,18 @@ const MeasureAvg = () => {
     <ScrollView style={styles.container}>
       <Text style={styles.title}>
       우리 아이는{"\n"}
-      <Text style={styles.highlight}>
-        상위 {100 - parsedComparisonData.heightPercentile}% 키
+        <Text style={styles.highlight}>
+          상위 {(100 - Number(parsedComparisonData.heightPercentile || 0)).toFixed(1)}% 키{"\n"}
+        </Text>
+        <Text style={styles.highlight}>
+          상위 {(100 - Number(parsedComparisonData.weightPercentile)).toFixed(1)}% 몸무게{"\n"}
+        </Text>
+        <Text style={styles.highlight}>
+          상위 {(100 - Number(parsedComparisonData.bmiPercentile)).toFixed(1)}% BMI
+        </Text>
+          를 기록했어요!
       </Text>
-      {"\n"}
-      <Text style={styles.highlight}>
-        상위 {100 - parsedComparisonData.weightPercentile}% 몸무게
-      </Text>
-      {"\n"}
-      <Text style={styles.highlight}>
-        상위 {100 - parsedComparisonData.bmiPercentile}% BMI
-      </Text>
-      를 기록했어요!
-    </Text>
-
+      
       {/* 상단 레이블 */}
       <View style={styles.row}>
         <Text style={styles.columnHeader}>우리 아이</Text>
@@ -135,8 +133,8 @@ const MeasureAvg = () => {
         chartConfig={chartConfig}
         verticalLabelRotation={0} 
         style={styles.chart}
-        withCustomBarColorFromData={true} // 막대별 색상 활성화
-        flatColor={true} // 색상 고정
+        withCustomBarColorFromData={true}
+        flatColor={true} 
       />
     </ScrollView>
   );
@@ -147,14 +145,14 @@ export default MeasureAvg;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9f9f9", // 배경색을 밝은 회색으로 설정
+    backgroundColor: "#f9f9f9", 
     padding: 20,
   },
   title: {
     fontSize: 20,
     fontWeight: "bold",
     textAlign: "center",
-    color: "#007bff", // 파란색 텍스트
+    color: "#007bff", 
     marginBottom: 20,
     marginTop:50
   },
@@ -168,7 +166,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#555",
     textAlign: "center",
-    width: "48%", // 두 열의 너비를 동일하게 설정
+    width: "48%", 
   },
   infoContainer: {
     backgroundColor: "#ffffff",
@@ -179,7 +177,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,
-    width: "48%", // 두 컨테이너가 같은 행에 배치되도록 설정
+    width: "48%",
     height : 70
   },
   infoText: {
@@ -202,7 +200,7 @@ const styles = StyleSheet.create({
   },
   highlight: {
     fontWeight: "bold",
-    color: "#007bff", // 파란색 강조 텍스트
+    color: "#007bff",
   },
   chart: {
     marginTop: 20,
