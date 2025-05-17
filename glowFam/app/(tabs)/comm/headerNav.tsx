@@ -57,7 +57,7 @@ const HeaderNav: React.FC = () => {
       </TouchableOpacity>
 
       {/* 화면 제목 */}
-      <Text style={styles.headerTitle}>메인 화면</Text>
+      <Text style={styles.headerTitle}>GrowFam</Text>
 
       {/* 📷 카메라 버튼 */}
       <TouchableOpacity

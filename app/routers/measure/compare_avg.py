@@ -14,33 +14,29 @@ excel_file_path = os.path.join(current_dir, "height_weight_data.xlsx")
 # 엑셀 데이터 읽기
 try:
     # 연령별 신장 데이터 처리
-    height_data = pd.read_excel(excel_file_path, sheet_name="연령별 신장")
-    height_data = height_data.dropna(subset=["만나이(개월)", "성별"])
-    print("height_data 열 이름:", height_data.columns)  # 열 이름 출력
-
-    # 필요한 열만 선택 (중앙값은 Unnamed: 12 컬럼)
-    height_data = height_data[["만나이(개월)", "성별", "신장(cm) 백분위수", "신장(cm) 표준점수", "Unnamed: 12"]]
-    height_data = height_data.groupby(["만나이(개월)", "성별"]).mean().reset_index()
-    height_data = height_data.set_index(["만나이(개월)", "성별"]).to_dict("index")
+    height_data_df = pd.read_excel(excel_file_path, sheet_name="연령별 신장")
+    height_data_df = height_data_df.dropna(subset=["만나이(개월)", "성별"])
+    #print("height_data 열 이름:", height_data_df.columns)  # 열 이름 출력
 
     # 연령별 체중 데이터 처리
-    weight_data = pd.read_excel(excel_file_path, sheet_name="연령별 체중")
-    weight_data = weight_data.dropna(subset=["만나이(개월)", "성별"])
-    print("weight_data 열 이름:", weight_data.columns)  # 열 이름 출력
-
-    weight_data = weight_data[["만나이(개월)", "성별", "체중(kg) 백분위수", "체중(kg) 표준점수", "Unnamed: 12"]]
-    weight_data = weight_data.groupby(["만나이(개월)", "성별"]).mean().reset_index()
-    weight_data = weight_data.set_index(["만나이(개월)", "성별"]).to_dict("index")
+    weight_data_df = pd.read_excel(excel_file_path, sheet_name="연령별 체중")
+    weight_data_df = weight_data_df.dropna(subset=["만나이(개월)", "성별"])
+    #print("weight_data 열 이름:", weight_data_df.columns)  # 열 이름 출력
 
     # 연령별 체질량지수(BMI) 데이터 처리
-    bmi_data = pd.read_excel(excel_file_path, sheet_name="연령별 체질량지수")
-    print("BMI 데이터 열 이름:", bmi_data.columns)  # 열 이름 출력
+    bmi_data_df = pd.read_excel(excel_file_path, sheet_name="연령별 체질량지수")
+    bmi_data_df = bmi_data_df.dropna(subset=["만나이(개월)", "성별"])
+    #print("BMI 데이터 열 이름:", bmi_data_df.columns)  # 열 이름 출력
 
-    # 필요한 열만 선택 (중앙값은 Unnamed: 12 컬럼)
-    bmi_data = bmi_data.dropna(subset=["만나이(개월)", "성별"])
-    bmi_data = bmi_data[["만나이(개월)", "성별", "체질량지수(kg/m2) 백분위수", "체질량지수(kg/m2) 표준점수", "Unnamed: 12"]]
-    bmi_data = bmi_data.groupby(["만나이(개월)", "성별"]).mean().reset_index()
-    bmi_data = bmi_data.set_index(["만나이(개월)", "성별"]).to_dict("index")
+    # 평균 및 백분위수 데이터(기존 로직 호환용)
+    def make_dict(df, value_cols):
+        temp = df[["만나이(개월)", "성별"] + value_cols]
+        temp = temp.groupby(["만나이(개월)", "성별"]).mean().reset_index()
+        return temp.set_index(["만나이(개월)", "성별"]).to_dict("index")
+
+    height_data = make_dict(height_data_df, ["신장(cm) 백분위수", "신장(cm) 표준점수", "Unnamed: 12"])
+    weight_data = make_dict(weight_data_df, ["체중(kg) 백분위수", "체중(kg) 표준점수", "Unnamed: 12"])
+    bmi_data = make_dict(bmi_data_df, ["체질량지수(kg/m2) 백분위수", "체질량지수(kg/m2) 표준점수", "Unnamed: 12"])
 
 except Exception as e:
     raise RuntimeError(f"엑셀 데이터를 읽는 중 오류가 발생했습니다: {e}")
@@ -50,10 +46,23 @@ def get_50th(row):
         return row["Unnamed: 12"]
     raise HTTPException(status_code=500, detail="중앙값(50th) 컬럼이 없습니다.")
 
+def get_percentile_from_value(percentile_points, value_points, value):
+    for i in range(len(value_points) - 1):
+        if value_points[i] <= value <= value_points[i+1]:
+            # 선형 보간
+            x0, x1 = value_points[i], value_points[i+1]
+            y0, y1 = percentile_points[i], percentile_points[i+1]
+            if x1 == x0:
+                return y0
+            return y0 + (value - x0) * (y1 - y0) / (x1 - x0)
+    if value < value_points[0]:
+        return percentile_points[0]
+    if value > value_points[-1]:
+        return percentile_points[-1]
+    return None
 @router.post("/compare")
 def compare_kid_data(request: CompareRequest):
     try:
-        # 요청 데이터 로깅
         print("요청 데이터:", request.dict())
 
         age = request.ageInMonths
@@ -80,10 +89,71 @@ def compare_kid_data(request: CompareRequest):
         bmi = weight / ((height / 100) ** 2)  # BMI 계산
         bmi_difference = bmi - average_bmi
 
-        # 백분위수 데이터 가져오기
-        height_percentile = height_data[(age, gender)]["신장(cm) 백분위수"]
-        weight_percentile = weight_data[(age, gender)]["체중(kg) 백분위수"]
-        bmi_percentile = bmi_data[(age, gender)]["체질량지수(kg/m2) 백분위수"]
+        # 백분위수별 값 리스트 정의
+        percentile_points = [3, 5, 10, 15, 25, 50, 75, 85, 90, 95, 97, 99]
+
+        # 키 백분위수 계산
+        row_h = height_data_df[(height_data_df["만나이(개월)"] == age) & (height_data_df["성별"] == gender)]
+        if row_h.empty:
+            raise HTTPException(status_code=404, detail="키 데이터 없음")
+        height_value_points = [
+            
+            float(row_h["Unnamed: 7"].values[0]), # 3th
+            float(row_h["Unnamed: 8"].values[0]), # 5th
+            float(row_h["Unnamed: 9"].values[0]), # 10th
+            float(row_h["Unnamed: 10"].values[0]), # 15th
+            float(row_h["Unnamed: 11"].values[0]), # 25th
+            float(row_h["Unnamed: 12"].values[0]), # 50th
+            float(row_h["Unnamed: 13"].values[0]), # 75th
+            float(row_h["Unnamed: 14"].values[0]), # 85th
+            float(row_h["Unnamed: 15"].values[0]), # 90th
+            float(row_h["Unnamed: 16"].values[0]), # 95th
+            float(row_h["Unnamed: 17"].values[0]), # 97th
+            float(row_h["Unnamed: 18"].values[0]), # 99th
+        ]
+        height_percentile = get_percentile_from_value(percentile_points, height_value_points, height)
+
+        # 몸무게 백분위수 계산
+        row_w = weight_data_df[(weight_data_df["만나이(개월)"] == age) & (weight_data_df["성별"] == gender)]
+        if row_w.empty:
+            raise HTTPException(status_code=404, detail="몸무게 데이터 없음")
+        weight_value_points = [
+            
+            float(row_w["Unnamed: 7"].values[0]), # 3th
+            float(row_w["Unnamed: 8"].values[0]), # 5th
+            float(row_w["Unnamed: 9"].values[0]), # 10th
+            float(row_w["Unnamed: 10"].values[0]), # 15th
+            float(row_w["Unnamed: 11"].values[0]), # 25th
+            float(row_w["Unnamed: 12"].values[0]), # 50th
+            float(row_w["Unnamed: 13"].values[0]), # 75th
+            float(row_w["Unnamed: 14"].values[0]), # 85th
+            float(row_w["Unnamed: 15"].values[0]), # 90th
+            float(row_w["Unnamed: 16"].values[0]), # 95th
+            float(row_w["Unnamed: 17"].values[0]), # 97th
+            float(row_w["Unnamed: 18"].values[0]), # 99th
+        ]
+        weight_percentile = get_percentile_from_value(percentile_points, weight_value_points, weight)
+
+        # BMI 백분위수 계산
+        row_b = bmi_data_df[(bmi_data_df["만나이(개월)"] == age) & (bmi_data_df["성별"] == gender)]
+        if row_b.empty:
+            raise HTTPException(status_code=404, detail="BMI 데이터 없음")
+        bmi_value_points = [
+            
+            float(row_b["Unnamed: 7"].values[0]), # 3th
+            float(row_b["Unnamed: 8"].values[0]), # 5th
+            float(row_b["Unnamed: 9"].values[0]), # 10th
+            float(row_b["Unnamed: 10"].values[0]), # 15th
+            float(row_b["Unnamed: 11"].values[0]), # 25th
+            float(row_b["Unnamed: 12"].values[0]), # 50th
+            float(row_b["Unnamed: 13"].values[0]), # 75th
+            float(row_b["Unnamed: 14"].values[0]), # 85th
+            float(row_b["Unnamed: 15"].values[0]), # 90th
+            float(row_b["Unnamed: 16"].values[0]), # 95th
+            float(row_b["Unnamed: 17"].values[0]), # 97th
+            float(row_b["Unnamed: 18"].values[0]), # 99th
+        ]
+        bmi_percentile = get_percentile_from_value(percentile_points, bmi_value_points, bmi)
 
         # 결과 반환
         return {
@@ -98,9 +168,9 @@ def compare_kid_data(request: CompareRequest):
             "heightDifference": round(height_difference, 1),
             "weightDifference": round(weight_difference, 1),
             "bmiDifference": round(bmi_difference, 1),
-            "heightPercentile": round(height_percentile, 1),  
-            "weightPercentile": round(weight_percentile, 1),  
-            "bmiPercentile": round(bmi_percentile, 1),       
+            "heightPercentile": round(height_percentile, 1),
+            "weightPercentile": round(weight_percentile, 1),
+            "bmiPercentile": round(bmi_percentile, 1),
         }
     except ZeroDivisionError:
         raise HTTPException(status_code=400, detail="키 값이 0이거나 잘못된 값입니다.")

@@ -77,6 +77,7 @@ class KidInfo(Base):
     kid_weight = Column(String(20), nullable=False)
     kid_gender = Column(String(1), nullable=False)
     kid_birthday = Column(String(30), nullable=False)
+    kid_name = Column(String(20), nullable=False)
     kid_info_regist_at = Column(TIMESTAMP, server_default=func.now())
 
     # Relationship
@@ -86,7 +87,7 @@ class Measure(Base):
     __tablename__ = "tb_measure"
 
     measure_no = Column(Integer, primary_key=True, index=True)
-    family_no = Column(Integer, ForeignKey("tb_family.family_no", ondelete="CASCADE"), nullable=False)
+    kid_info_no = Column(Integer, ForeignKey("tb_kid_info.kid_info_no", ondelete="CASCADE"), nullable=False)
     measure_height = Column(String(100))
     measure_regist_at = Column(TIMESTAMP, server_default=func.now())
 

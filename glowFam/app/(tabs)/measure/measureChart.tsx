@@ -11,9 +11,9 @@ interface MeasureChartProps {
 
 const MeasureChart: React.FC<MeasureChartProps> = ({ data }) => {
   const chartConfig = {
-    backgroundColor: '#e26a00',
-    backgroundGradientFrom: '#fb8c00',
-    backgroundGradientTo: '#ffa726',
+    backgroundColor: '#aaa',
+    backgroundGradientFrom: '#F2D8E3',
+    backgroundGradientTo: '#F2D8E3',
     decimalPlaces: 2, // 소수점 자리수
     color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
     labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
@@ -21,7 +21,7 @@ const MeasureChart: React.FC<MeasureChartProps> = ({ data }) => {
     propsForDots: {
       r: '6',
       strokeWidth: '2',
-      stroke: '#ffa726',
+      stroke: '#fff',
     },
   };
 
