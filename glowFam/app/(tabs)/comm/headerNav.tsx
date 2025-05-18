@@ -3,7 +3,6 @@ import { View, TouchableOpacity, Text, StyleSheet, Image, Alert } from "react-na
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_URL } from "../../../constants/config";
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 const HeaderNav: React.FC = () => {
   const router = useRouter();
@@ -59,13 +58,7 @@ const HeaderNav: React.FC = () => {
       {/* 화면 제목 */}
       <Text style={styles.headerTitle}>GrowFam</Text>
 
-      {/* 📷 카메라 버튼 */}
-      <TouchableOpacity
-        style={styles.cameraButton}
-        onPress={() => router.push("/measure/camera")}
-      >
-        <Text style={styles.cameraIcon}><FontAwesome5 name="ruler-vertical" size={24} color="black" /></Text>
-      </TouchableOpacity>
+     
     </View>
   );
 };
@@ -93,12 +86,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
   },
-  cameraButton: {
-    padding: 10,
-  },
-  cameraIcon: {
-    fontSize: 24,
-  },
+ 
   menuItem: {
     paddingVertical: 10,
   },

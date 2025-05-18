@@ -52,7 +52,8 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={({ route }) => {
-        const hiddenTabs = ['users/login', 'users/regist'];
+        // 숨길 탭 이름 배열에 'measure/camera' 추가
+        const hiddenTabs = ['users/login', 'users/regist', 'measure/camera'];
         return {
           headerShown: false,
           tabBarStyle: hiddenTabs.includes(route.name) ? { display: 'none' } : {},
@@ -60,7 +61,7 @@ export default function TabsLayout() {
       }}
       tabBar={(props) => {
         const routeName = props.state?.routes[props.state.index]?.name ?? '';
-        const hiddenTabs = ['users/login', 'users/regist'];
+        const hiddenTabs = ['users/login', 'users/regist', 'measure/camera'];
         return hiddenTabs.includes(routeName) ? null : <BottomNav {...props} />;
       }}
     >
@@ -68,6 +69,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="community/community" options={{ title: 'Community' }} />
       <Tabs.Screen name="schedule/schedule" options={{ title: 'Schedule' }} />
       <Tabs.Screen name="graph/graph" options={{ title: 'Graph' }} />
+      <Tabs.Screen name="measure/camera" options={{ title: 'Camera' }} />
     </Tabs>
   );
 }

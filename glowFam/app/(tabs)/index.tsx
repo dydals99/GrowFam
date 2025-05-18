@@ -1,20 +1,11 @@
 import React, { useState, useEffect } from "react";
-import {
-  StyleSheet,
-  View,
-  Text,
-  SafeAreaView,
-  ActivityIndicator,
-  Alert,
-  Button,
-  TouchableOpacity,
-  ScrollView,
-} from "react-native";
+import { StyleSheet, View, Text, SafeAreaView, ActivityIndicator, Alert, Button, TouchableOpacity, ScrollView,} from "react-native";
 import HeaderNav from "./comm/headerNav";
 import { API_URL } from "../../constants/config";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import MeasureChart from "./measure/measureChart";
+import { useFocusEffect } from '@react-navigation/native';
 
 const MeasureList = () => {
   interface MeasureData {
@@ -42,52 +33,58 @@ const MeasureList = () => {
 
   const router = useRouter();
 
-  useEffect(() => {
-    const fetchFamilyData = async () => {
-      try {
-        const token = await AsyncStorage.getItem("access_token");
-        if (!token) {
-          router.replace("./users/login");
-          return;
-        }
-        const userNo = await AsyncStorage.getItem("user_no");
-        if (!userNo) {
-          router.replace("./users/login");
-          return;
-        }
-        const familyResponse = await fetch(`${API_URL}/users/family/${userNo}`);
-        if (!familyResponse.ok) {
-          return;
-        }
-        const familyData = await familyResponse.json();
-        const family_no = familyData.family_no;
-
-        // 아이 정보 먼저 가져오기
-        const kidInfoResponse = await fetch(
-          `${API_URL}/measure/kid-info?family_no=${family_no}`
-        );
-        if (!kidInfoResponse.ok) {
-          throw new Error("아이 정보를 가져오는데 실패했습니다.");
-        }
-        const kidInfoData = await kidInfoResponse.json();
-        setKids(kidInfoData);
-
-        // 첫 아이의 kid_info_no로 측정 데이터 가져오기
-        if (kidInfoData.length > 0) {
-          const firstKidInfoNo = kidInfoData[0].kid_info_no;
-          await fetchKidMeasureData(firstKidInfoNo);
-        }
-      } catch (error) {
-        setError("데이터를 불러오는 중 오류가 발생했습니다.");
-      } finally {
-        setLoading(false);
+  const fetchFamilyData = async () => {
+    try {
+      const token = await AsyncStorage.getItem("access_token");
+      if (!token) {
+        router.replace("./users/login");
+        return;
       }
-    };
+      const userNo = await AsyncStorage.getItem("user_no");
+      if (!userNo) {
+        router.replace("./users/login");
+        return;
+      }
+      const familyResponse = await fetch(`${API_URL}/users/family/${userNo}`);
+      if (!familyResponse.ok) {
+        return;
+      }
+      const familyData = await familyResponse.json();
+      const family_no = familyData.family_no;
 
+      // 아이 정보 먼저 가져오기
+      const kidInfoResponse = await fetch(
+        `${API_URL}/measure/kid-info?family_no=${family_no}`
+      );
+      if (!kidInfoResponse.ok) {
+        throw new Error("아이 정보를 가져오는데 실패했습니다.");
+      }
+      const kidInfoData = await kidInfoResponse.json();
+      setKids(kidInfoData);
+
+      if (kidInfoData.length > 0) {
+        const firstKidInfoNo = kidInfoData[0].kid_info_no;
+        await fetchKidMeasureData(firstKidInfoNo);
+      }
+    } catch (error) {
+      setError("데이터를 불러오는 중 오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchFamilyData();
   }, []);
-
-  // 아이별 측정 데이터 가져오기
+  useFocusEffect(
+    React.useCallback(() => {
+      if (kids.length > 0) {
+        fetchKidMeasureData(kids[selectedKidIndex].kid_info_no);
+      } else {
+        fetchFamilyData();
+      }
+    }, [kids, selectedKidIndex])
+  );  
   const fetchKidMeasureData = async (kid_info_no: number) => {
     try {
       setLoading(true);
@@ -102,7 +99,7 @@ const MeasureList = () => {
         return item.measure_height && !isNaN(parseFloat(item.measure_height));
       });
       setData(validData);
-      setShowAllGrowth(false); // 아이 변경 시 더보기 초기화
+      setShowAllGrowth(false); 
     } catch (error) {
       setError("키 측정 데이터를 불러오는 중 오류가 발생했습니다.");
       setData([]);
@@ -111,7 +108,6 @@ const MeasureList = () => {
     }
   };
 
-  // 탭 클릭 시 해당 아이의 측정 데이터 로드
   const handleSelectKid = (idx: number) => {
     setSelectedKidIndex(idx);
     const kid = kids[idx];
@@ -133,8 +129,7 @@ const MeasureList = () => {
         {displayList.length > 0 ? (
           displayList
             .map((item, idx, arr) => {
-              // arr은 displayList임에 주의!
-              // 전체 sorted에서의 인덱스 계산
+           
               const globalIdx = sorted.indexOf(item);
               const prev =
                 globalIdx > 0
@@ -326,7 +321,6 @@ const MeasureList = () => {
     </View>
   );
 
-  // 선택된 아이 정보만 보여줌
   const KidItem = ({ kid }: { kid: KidInfo }) => {
     const gender =
       kid.kid_gender === "M"
@@ -376,12 +370,28 @@ const MeasureList = () => {
           <Text style={styles.infoValue}>{kid.kid_height}cm</Text>
         </View>
         <View style={styles.divider} />
-        <TouchableOpacity
-          style={styles.compareBtn}
-          onPress={() => handleComparison(kid)}
-        >
-          <Text style={styles.compareBtnText}>평균과 비교</Text>
-        </TouchableOpacity>
+        {/* 버튼 2개를 같은 행에 배치 */}
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <TouchableOpacity
+            style={[styles.compareBtn, { flex: 1 }]}
+            onPress={() => handleComparison(kid)}
+          >
+            <Text style={styles.compareBtnText}>평균과 비교</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+          style={[styles.compareBtn, { flex: 1, backgroundColor: "#eee" }]}
+          onPress={() =>
+            router.push({
+              pathname: "/measure/camera",
+              params: { kid_info_no: kid.kid_info_no.toString() },
+            })
+          }
+          >
+            <Text style={{ color: "#000", fontWeight: "bold", fontSize: 16 }}>
+              키 측정
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -524,7 +534,7 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   manageBtnText: {
-    color: "#000",
+    color: "#aaa",
     fontWeight: "bold",
     fontSize: 16,
   },
