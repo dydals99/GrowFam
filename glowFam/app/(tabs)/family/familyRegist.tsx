@@ -173,14 +173,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     marginBottom: 15,
     backgroundColor: '#fff',
-    justifyContent: 'center', // 수직 가운데 정렬
+    justifyContent: 'center', 
   },
   inputWithTooltip: {
     width: '100%',
     position: 'relative',
   },
   inputWithIcon: {
-    paddingRight: 40, // 아이콘 공간 확보
+    paddingRight: 40, 
   },
   tooltipIconInside: {
     position: 'absolute',

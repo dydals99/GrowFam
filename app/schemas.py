@@ -169,15 +169,31 @@ class KidInfoBase(BaseModel):
     kid_gender: str
     kid_birthday: str
 
-class KidInfoCreate(KidInfoBase):
+class KidInfoCreate(BaseModel):
     family_no: int
+    kid_name: str
+    kid_birthday: str
+    kid_gender: str
+    kid_height: str
+    kid_weight: str
 
+class KidDeleteRequest(BaseModel):
+    kid_info_no: int
+    
 class KidInfo(KidInfoBase):
     kid_info_no: int
     kid_info_regist_at: datetime
 
     class Config:
         from_attributes = True
+
+class KidInfoUpdate(BaseModel):
+    kid_info_no: int
+    kid_name: str
+    kid_birthday: str
+    kid_gender: str
+    kid_height: str
+    kid_weight: str
 
 class CompareRequest(BaseModel):
     ageInMonths: int
