@@ -53,7 +53,32 @@ def create_community(
     db.add(db_comm)
     db.commit()
     db.refresh(db_comm)
-    return db_comm
+
+    # User와 조인하여 user_nickname 포함해서 반환
+    result = (
+        db.query(
+            models.Community.community_no,
+            models.Community.community_title,
+            models.Community.community_content,
+            models.Community.user_no,
+            models.Community.community_regist_at,
+            models.Community.like_count,
+            models.User.user_nickname.label("user_nickname")
+        )
+        .join(models.User, models.Community.user_no == models.User.user_no)
+        .filter(models.Community.community_no == db_comm.community_no)
+        .first()
+    )
+
+    return {
+        "community_no": result.community_no,
+        "community_title": result.community_title,
+        "community_content": result.community_content,
+        "user_no": result.user_no,
+        "user_nickname": result.user_nickname,
+        "community_regist_at": result.community_regist_at,
+        "like_count": result.like_count,
+    }
 
 @router.get("/popular", response_model=List[schemas.CommunityOut])
 def read_popular_communities(db: Session = Depends(database.get_db)):

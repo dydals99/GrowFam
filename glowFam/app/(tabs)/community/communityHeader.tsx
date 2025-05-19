@@ -19,6 +19,7 @@ export default function CommunityHeader({
       <TextInput
         style={styles.searchBar}
         placeholder="궁금하신 점을 입력해주세요" 
+        placeholderTextColor="#aaa" 
         value={searchText}
         onChangeText={setSearchText}
         onFocus={() => setSearchFocused(true)}
