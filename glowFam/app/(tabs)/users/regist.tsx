@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { API_URL } from '../../../constants/config';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function RegisterScreen() {
   const [userName, setUserName] = useState('');
@@ -9,8 +10,11 @@ export default function RegisterScreen() {
   const [userEmail, setUserEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [userPassword, setUserPassword] = useState('');
+  const [userPhone, setUserPhone] = useState('');
   const [isNicknameValid, setIsNicknameValid] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [isPhoneValid, setIsPhoneValid] = useState(false);
+
   const router = useRouter();
 
   const handleRegister = async () => {
@@ -18,40 +22,70 @@ export default function RegisterScreen() {
       Alert.alert('Error', '닉네임 중복 확인이 필요합니다.');
       return;
     }
+    if (!isPhoneValid) {
+      Alert.alert('Error', '전화번호 중복 확인이 필요합니다.');
+      return;
+    }
     if (!isEmailVerified) {
       Alert.alert('Error', '이메일 인증이 필요합니다.');
       return;
     }
-  
+    // familyRegist로 회원가입 정보 전달
+    router.replace({
+      pathname: '/family/familyRegist',
+      params: {
+        user_name: userName,
+        user_nickname: userNickname,
+        user_email: userEmail,
+        user_password: userPassword,
+        user_phone: userPhone,
+      }
+    });
+  };
+
+  const checkPhone = async () => {
+    if (!userPhone) {
+      Alert.alert('전화번호를 입력하세요.');
+      return;
+    }
+    // 전화번호 11자리, 010으로 시작하는지 체크
+    if (!/^010\d{8}$/.test(userPhone)) {
+      Alert.alert('전화번호는 010으로 시작하는 11자리 숫자여야 합니다.');
+      return;
+    }
     try {
-      const response = await fetch(`${API_URL}/users/register`, {
+      const response = await fetch(`${API_URL}/users/check-phone`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_name: userName,
-          user_nickname: userNickname,
-          user_email: userEmail,
-          user_password: userPassword,
-          verification_code: verificationCode,
-        }),
+        body: JSON.stringify({ phone: userPhone }),
       });
-  
-      if (!response.ok) {
-        throw new Error('회원가입 실패');
+      const data = await response.json();
+      if (data.isValid) {
+        setIsPhoneValid(true);
+        Alert.alert('사용 가능한 전화번호입니다.');
+      } else {
+        setIsPhoneValid(false);
+        Alert.alert('이미 사용 중인 전화번호입니다.');
       }
-  
-      const data = await response.json(); // 서버에서 반환된 user_no와 family_no
-      const { user_no, family_no } = data;
-  
-      // 회원가입 성공 시 familyRegist로 family_no 전달
-      router.replace(`/family/familyRegist?family_no=${family_no}`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-      Alert.alert('Error', errorMessage);
+      Alert.alert('전화번호 확인 중 오류가 발생했습니다.');
     }
   };
 
   const checkNickname = async () => {
+    if (!userNickname) {
+      Alert.alert('닉네임을 입력하세요.');
+      return;
+    }
+    if (userNickname.length < 2) {
+      Alert.alert('닉네임은 두 글자 이상이어야 합니다.');
+      return;
+    }
+    // 동일 문자 반복(예: ㅇㅇㅇ, ㅅㅅㅅ 등) 방지
+    if (/^([ㄱ-ㅎ가-힣a-zA-Z0-9])\1+$/.test(userNickname)) {
+      Alert.alert('동일한 문자를 반복한 닉네임은 사용할 수 없습니다.');
+      return;
+    }
     try {
       const response = await fetch(`${API_URL}/users/check-nickname`, {
         method: 'POST',
@@ -74,6 +108,23 @@ export default function RegisterScreen() {
   };
 
   const sendEmailVerification = async () => {
+    // 1. 이메일 중복 체크
+    try {
+      const checkRes = await fetch(`${API_URL}/users/check-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail }),
+      });
+      const checkData = await checkRes.json();
+      if (!checkData.isValid) {
+        Alert.alert('이미 사용 중인 이메일입니다.');
+        return;
+      }
+    } catch (error) {
+      Alert.alert('이메일 중복 확인 중 오류가 발생했습니다.');
+      return;
+    }
+
     try {
       const response = await fetch(`${API_URL}/users/send-email-verification`, {
         method: 'POST',
@@ -116,23 +167,28 @@ export default function RegisterScreen() {
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => router.back()}
+        activeOpacity={0.7}>
+        <Ionicons name="arrow-back" size={28} color="#333" />
+      </TouchableOpacity>
       <Text style={styles.title}>회원 가입</Text>
-      <Text style={styles.subtitle}>Welcome, GlowFam</Text>
+      <Text style={styles.subtitle}>Welcome, GrowFam</Text>
 
       <View style={styles.inputWithButton}>
         <TextInput
           style={[styles.input, styles.inputFlex]}
-          placeholder="Name"
+          placeholder="이름"
           value={userName}
           onChangeText={setUserName}
           placeholderTextColor="#aaa"
         />
       </View>
-
       <View style={styles.inputWithButton}>
         <TextInput
           style={[styles.input, styles.inputFlex]}
-          placeholder="Nickname"
+          placeholder="닉네임"
           value={userNickname}
           onChangeText={setUserNickname}
           editable={!isNicknameValid}
@@ -146,11 +202,31 @@ export default function RegisterScreen() {
           <Text style={styles.inlineButtonText}>중복 확인</Text>
         </TouchableOpacity>
       </View>
-
       <View style={styles.inputWithButton}>
         <TextInput
           style={[styles.input, styles.inputFlex]}
-          placeholder="Email"
+          placeholder='전화번호 "-" 빼고 입력해주세요.'
+          value={userPhone}
+          onChangeText={text => {
+            setUserPhone(text);
+            setIsPhoneValid(false); // 값이 바뀌면 다시 중복확인 필요
+          }}
+          keyboardType="phone-pad"
+          placeholderTextColor="#aaa"
+          editable={!isPhoneValid}
+        />
+        <TouchableOpacity
+          style={[styles.inlineButton, isPhoneValid && styles.disabledButton]}
+          onPress={checkPhone}
+          disabled={isPhoneValid}
+        >
+          <Text style={styles.inlineButtonText}>중복 확인</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.inputWithButton}>
+        <TextInput
+          style={[styles.input, styles.inputFlex]}
+          placeholder="이메일"
           value={userEmail}
           onChangeText={setUserEmail}
           keyboardType="email-address"
@@ -165,7 +241,7 @@ export default function RegisterScreen() {
       <View style={styles.inputWithButton}>
         <TextInput
           style={[styles.input, styles.inputFlex]}
-          placeholder="Verification Code"
+          placeholder="이메일 인증코드"
           value={verificationCode}
           onChangeText={setVerificationCode}
           keyboardType="numeric"
@@ -184,7 +260,7 @@ export default function RegisterScreen() {
       <View style={styles.inputWithButton}>
         <TextInput
           style={[styles.input, styles.inputFlex]}
-          placeholder="Password"
+          placeholder="비밀번호"
           value={userPassword}
           onChangeText={setUserPassword}
           secureTextEntry
@@ -270,4 +346,11 @@ const styles = StyleSheet.create({
   disabledButton: {
     backgroundColor: '#ccc',
   },
+  backButton: {
+    position: 'absolute',
+    top: 40,
+    left: 20,
+    zIndex: 10,
+    padding: 8,
+},
 });

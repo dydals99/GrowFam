@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import KidInfo, Measure
+from datetime import datetime
 
 router = APIRouter()
 
@@ -22,16 +23,12 @@ def get_height_measurements(kid_info_no: int, db: Session = Depends(get_db)):
     ]
 
     return result
+
 @router.post("/measure/save", tags=["Measure"])
 def save_measure(
     data: dict = Body(...),
     db: Session = Depends(get_db)
 ):
-    """
-    키 측정값 저장 API
-    - kid_info_no: int
-    - measure_height: str (cm 단위, 소수점 가능)
-    """
     kid_info_no = data.get("kid_info_no")
     measure_height = data.get("measure_height")
 
@@ -44,7 +41,8 @@ def save_measure(
     try:
         measure = Measure(
             kid_info_no=kid_info_no,
-            measure_height=measure_height
+            measure_height=measure_height,
+            measure_regist_at=datetime.now()
         )
         db.add(measure)
         db.commit()

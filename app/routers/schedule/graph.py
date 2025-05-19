@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 from app.database import get_db
-from app.models import Schedule, ScheduleCheck, Family
+from app.models import Schedule, ScheduleCheck, Family, User
 
 router = APIRouter(
     prefix="/graph",
@@ -14,23 +14,24 @@ def get_family_progress(db: Session = Depends(get_db)):
     try:
         results = (
             db.query(
-                Family.family_nickname,
+                User.user_nickname,
                 func.sum(Schedule.schedule_total_count).label("total_missions"),
                 func.sum(ScheduleCheck.schedule_check_count).label("completed_missions")
             )
-            .join(Schedule, Family.family_no == Schedule.family_no)
+            .join(Family, Family.family_no == Schedule.family_no)
+            .join(User, User.user_no == Family.user_no)
             .join(ScheduleCheck, Schedule.schedule_no == ScheduleCheck.schedule_no)
-            .group_by(Family.family_nickname)
+            .group_by(User.user_nickname)
             .all()
         )
 
         family_progress = []
         for result in results:
-            family_nickname, total_missions, completed_missions = result
+            user_nickname, total_missions, completed_missions = result
             progress = (completed_missions / total_missions * 100) if total_missions > 0 else 0
             family_progress.append({
-                "family_nickname": family_nickname,
-                "progress": round(progress, 1)  
+                "user_nickname": user_nickname,
+                "progress": round(progress, 1)
             })
 
         # 퍼센트 기준으로 내림차순 정렬

@@ -7,7 +7,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 
 interface FamilyData {
-  family_nickname: string;
+  user_nickname: string;
   progress: number;
 }
 interface GoalProgress {
@@ -79,7 +79,7 @@ const GlowFamScreen: React.FC = () => {
   const renderItem = ({ item }: { item: FamilyData }) => (
     <View style={styles.rowContainer}>
       {/* 닉네임 */}
-      <Text style={styles.familyName}>{item.family_nickname}</Text>
+      <Text style={styles.familyName}>{item.user_nickname}</Text>
 
       {/* 프로그레스 바와 퍼센트 */}
       <View style={styles.progressRow}>
@@ -108,7 +108,7 @@ const GlowFamScreen: React.FC = () => {
       {/* 목록 */}
       <FlatList
         data={familyProgress}
-        keyExtractor={(item) => item.family_nickname}
+        keyExtractor={(item) => item.user_nickname}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
       /> 

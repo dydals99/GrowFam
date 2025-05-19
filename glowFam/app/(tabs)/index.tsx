@@ -73,18 +73,18 @@ const MeasureList = () => {
     }
   };
 
-  useEffect(() => {
-    fetchFamilyData();
-  }, []);
   useFocusEffect(
     React.useCallback(() => {
-      if (kids.length > 0) {
-        fetchKidMeasureData(kids[selectedKidIndex].kid_info_no);
-      } else {
-        fetchFamilyData();
-      }
-    }, [kids, selectedKidIndex])
-  );  
+      fetchFamilyData();
+    }, [])
+  );
+
+  useEffect(() => {
+    if (kids.length > 0) {
+      fetchKidMeasureData(kids[selectedKidIndex].kid_info_no);
+    }
+  }, [selectedKidIndex, kids]);
+
   const fetchKidMeasureData = async (kid_info_no: number) => {
     try {
       setLoading(true);

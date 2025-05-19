@@ -5,63 +5,68 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { API_URL } from '../../../constants/config';
 
-
 export default function FamilyInfoScreen() {
-  const params = useLocalSearchParams(); // 최상위 레벨에서 호출
-  const family_no = params.family_no; // family_no 가져오기
+  const params = useLocalSearchParams();
   const router = useRouter();
-  
+
+  // 회원가입 정보 받기
+  const user_name = params.user_name as string;
+  const user_nickname = params.user_nickname as string;
+  const user_email = params.user_email as string;
+  const user_password = params.user_password as string;
+  const user_phone = params.user_phone as string;
+
   const [familyGoal, setFamilyGoal] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [gender, setGender] = useState('');
   const [height, setHeight] = useState('');
   const [weight, setWeight] = useState('');
+  const [kidName, setKidName] = useState('');
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([
     { label: '남자', value: 'M' },
-    { label: '여자', value: 'F' },
+    { label: '여자', value: 'W' },
   ]);
   const [isTooltipVisible, setTooltipVisible] = useState(false);
-  
 
-  const toggleTooltip = () => {
-    setTooltipVisible(!isTooltipVisible);
-  };
+  const toggleTooltip = () => setTooltipVisible(!isTooltipVisible);
 
   const handleComplete = async () => {
-    if (!familyGoal || !birthDate || !gender || !height || !weight) {
+    if (!familyGoal || !kidName || !birthDate || !gender || !height || !weight) {
       Alert.alert('Error', '모든 필드를 입력해주세요.');
       return;
     }
 
     try {
-      const response = await fetch(`${API_URL}/family/complete`, {
+      const response = await fetch(`${API_URL}/users/register-all`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          goal: { family_no: family_no, month_golas_contents: familyGoal },
-          kid: {
-            family_no: family_no,
-            kid_height: height,
-            kid_weight: weight,
-            kid_gender: gender,
-            kid_birthday: birthDate,
-          },
+          user_name,
+          user_nickname,
+          user_email,
+          user_password,
+          user_phone,
+          family_goal: familyGoal,
+          kid_name: kidName,
+          kid_birthday: birthDate,
+          kid_gender: gender,
+          kid_height: height,
+          kid_weight: weight,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('데이터 저장 실패');
+        throw new Error('회원가입 실패');
       }
 
-      Alert.alert('Success', '가족 정보와 자녀 정보가 저장되었습니다.');
-      router.replace('../users/login'); // 로그인 화면으로 이동
+      Alert.alert('Success', '회원가입이 완료되었습니다.');
+      router.replace('../users/login');
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.');
     }
   };
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>가족 및 자녀 정보 입력</Text>
@@ -88,7 +93,13 @@ export default function FamilyInfoScreen() {
           </Text>
         </View>
       )}
-
+      <TextInput
+        style={styles.input}
+        placeholder="이름을 입력하세요"
+        value={kidName}
+        onChangeText={setKidName}
+        placeholderTextColor="#aaa"
+      />
       {/* 생년월일 선택 */}
       <TouchableOpacity style={styles.input} onPress={() => setDatePickerVisibility(true)}>
         <Text style={birthDate ? styles.inputText : styles.placeholderText}>

@@ -1,21 +1,24 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, File, UploadFile
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import User, Family
-from app.schemas import UserCreate
 from passlib.context import CryptContext
-import random
-import string
 from fastapi.responses import RedirectResponse
-import smtplib
 from email.mime.text import MIMEText
 from app.utils import create_access_token, get_current_user
 from app.schemas import NicknameRequest, EmailVerificationRequest, EmailVerificationConfirmRequest, LoginRequest, UpdateUserInfoRequest
+from app.schemas import RegisterAllRequest, EmailCheckRequest, FindPwRequest, FindIdRequest, PhoneCheckRequest
+from app.models import User, Family, FamilyMonthGoals, KidInfo
+from sqlalchemy.exc import SQLAlchemyError
 from datetime import timedelta
+import random
+import string
+import smtplib
+import logging
 import shutil
 
 # Token expiration time in minutes
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/users",
@@ -63,6 +66,20 @@ def check_nickname(request: NicknameRequest, db: Session = Depends(get_db)):
         return {"isValid": False}
     return {"isValid": True}
 
+@router.post("/check-email")
+def check_email(request: EmailCheckRequest, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.user_email == request.email).first()
+    if existing_user:
+        return {"isValid": False}
+    return {"isValid": True}
+
+@router.post("/check-phone")
+def check_phone(request: PhoneCheckRequest, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.user_phone == request.phone).first()
+    if existing_user:
+        return {"isValid": False}
+    return {"isValid": True}
+
 @router.post("/send-email-verification")
 def send_email_verification(request: EmailVerificationRequest):
     # 인증 코드 생성
@@ -100,45 +117,62 @@ def verify_email_link(email: str, code: str):
         return RedirectResponse(url="https://your-app-url.com/email-verified")
     raise HTTPException(status_code=400, detail="Invalid or expired verification link.")
 
-@router.post("/register")
-def register(user: UserCreate, db: Session = Depends(get_db)):
-    print(f"Received registration request: {user}")  # 디버깅 로그 추가
+@router.post("/register-all")
+def register_all(data: RegisterAllRequest, db: Session = Depends(get_db)):
+    try:
+        # 트랜잭션 시작
+        # 1. User 생성
+        hashed_password = pwd_context.hash(data.user_password)
+        new_user = User(
+            user_name=data.user_name,
+            user_nickname=data.user_nickname,
+            user_email=data.user_email,
+            user_password=hashed_password,
+            user_phone=data.user_phone
+        )
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
 
-    # 닉네임 중복 확인
-    existing_user = db.query(User).filter(User.user_nickname == user.user_nickname).first()
-    if existing_user:
-        print("Nickname already taken")  # 디버깅 로그 추가
-        raise HTTPException(status_code=400, detail="Nickname already taken")
+        # 2. Family 생성
+        new_family = Family(user_no=new_user.user_no)
+        db.add(new_family)
+        db.commit()
+        db.refresh(new_family)
 
-    # 비밀번호 암호화
-    hashed_password = pwd_context.hash(user.user_password)
+        # 3. FamilyMonthGoals 생성
+        db_goal = FamilyMonthGoals(
+            family_no=new_family.family_no,
+            month_golas_contents=data.family_goal
+        )
+        db.add(db_goal)
+        db.commit()
+        db.refresh(db_goal)
 
-    # 사용자 생성
-    new_user = User(
-        user_name=user.user_name,
-        user_nickname=user.user_nickname,
-        user_email=user.user_email,
-        user_password=hashed_password
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+        # 4. KidInfo 생성
+        db_kid = KidInfo(
+            family_no=new_family.family_no,
+            kid_name=data.kid_name,
+            kid_birthday=data.kid_birthday,
+            kid_gender=data.kid_gender,
+            kid_height=data.kid_height,
+            kid_weight=data.kid_weight
+        )
+        db.add(db_kid)
+        db.commit()
+        db.refresh(db_kid)
 
-    # 가족 정보 생성
-    adjectives = ["똑똑한", "용감한", "친절한", "행복한", "사려깊은", "밝은", "따뜻한", "재미있는"]
-    animals = ["돌고래네", "호랑이네", "사자네", "토끼네", "코끼리네", "여우네", "펭귄네", "부엉이네"]
+        return {
+            "success": True,
+            "user_no": new_user.user_no,
+            "family_no": new_family.family_no,
+            "goal": db_goal,
+            "kid": db_kid
+        }
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"회원가입 전체 트랜잭션 실패: {str(e)}")
 
-    random_family_nickname = f"{random.choice(adjectives)} {random.choice(animals)}"  # 랜덤 닉네임 생성
-    new_family = Family(
-        user_no=new_user.user_no,
-        family_nickname=random_family_nickname
-    )
-    db.add(new_family)
-    db.commit()
-    db.refresh(new_family)
-
-    print(f"User registered successfully: {new_user.user_no}, Family created: {new_family.family_no}")  # 디버깅 로그 추가
-    return {"success": True, "user_no": new_user.user_no, "family_no": new_family.family_no}
 
 @router.post("/login")
 def login(request: LoginRequest, db: Session = Depends(get_db)):
@@ -233,5 +267,51 @@ def get_family_info(user_no: int, db: Session = Depends(get_db)):
 
     return {
         "family_no": family.family_no,
-        "family_nickname": family.family_nickname
     }
+
+@router.post("/find-id")
+def find_id(request: FindIdRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(
+        User.user_name == request.user_name,
+        User.user_phone == request.user_phone
+    ).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="일치하는 회원이 없습니다.")
+    return {"success": True, "user_email": user.user_email}
+
+# 임시 비밀번호 메일 발송 함수 (재사용)
+def send_temp_password(email: str, temp_pw: str):
+    subject = "GrowFam 임시 비밀번호 안내"
+    body = f"임시 비밀번호: {temp_pw}\n로그인 후 반드시 비밀번호를 변경해주세요."
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = EMAIL_ADDRESS
+    msg["To"] = email
+
+    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        server.starttls()
+        server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+        server.sendmail(EMAIL_ADDRESS, email, msg.as_string())
+
+# 비밀번호 찾기
+@router.post("/find-password")
+def find_password(request: FindPwRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.user_email == request.user_email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="해당 이메일로 가입된 회원이 없습니다.")
+
+    # 임시 비밀번호 생성
+    temp_pw = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+    user.user_password = pwd_context.hash(temp_pw)
+    db.commit()
+
+    # 임시 비밀번호 이메일 발송
+    try:
+        send_temp_password(request.user_email, temp_pw)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"임시 비밀번호 메일 전송 실패: {str(e)}")
+
+    return {"success": True, "message": "임시 비밀번호가 이메일로 전송되었습니다."}
+
+
+

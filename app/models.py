@@ -10,6 +10,7 @@ class User(Base):
     user_no = Column(Integer, primary_key=True, index=True)
     user_name = Column(String(20), nullable=True) 
     user_nickname = Column(String(20), nullable=False, unique=True)
+    user_phone = Column(String(50), nullable=True) 
     user_email = Column(String(255), nullable=False)
     user_password = Column(String(100), nullable=False)
     user_role = Column(String(20), default="member")
@@ -49,7 +50,6 @@ class Family(Base):
 
     family_no = Column(Integer, primary_key=True, index=True)
     user_no = Column(Integer, ForeignKey("tb_users.user_no", ondelete="CASCADE"), nullable=False)
-    family_nickname = Column(String(20), nullable=True)
     family_regist_at = Column(TIMESTAMP, server_default=func.now())
 
     # Relationship

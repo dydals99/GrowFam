@@ -116,12 +116,20 @@ export default function LoginScreen() {
         <Text style={styles.buttonText}>로그인</Text>
       </TouchableOpacity>
 
-      {/* 하단 링크 */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>계정이 없으신가요? </Text>
-        <TouchableOpacity onPress={() => router.push('./regist')}>
-          <Text style={styles.footerLink}>회원가입</Text>
-        </TouchableOpacity>
+      {/* 회원가입, ID/PW 찾기기 */}
+      <View style={styles.footerWrap}>
+        <View style={styles.footerRow}>
+          <Text style={styles.footerText}>계정이 없으신가요? </Text>
+          <TouchableOpacity onPress={() => router.push('./regist')}>
+            <Text style={styles.footerLink}>회원가입</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.footerRow}>
+          <Text style={styles.footerText}>ID/PW를 잊으셨나요? </Text>
+          <TouchableOpacity onPress={() => { router.push('./findUser')}}>
+            <Text style={styles.findLink}>ID/PW 찾기</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -187,9 +195,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  footer: {
-    flexDirection: 'row',
+  // 스타일에 아래 추가
+  footerWrap: {
+    width: '100%',
     marginTop: 20,
+    alignItems: 'center',
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
   footerText: {
     fontSize: 14,
@@ -200,4 +216,15 @@ const styles = StyleSheet.create({
     color: '#28a745',
     fontWeight: 'bold',
   },
+  findContainer: {
+    flexDirection: 'row',
+    marginTop: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  findLink: {
+    fontSize: 14,
+    color: '#007bff',
+    fontWeight: 'bold',
+},
 });

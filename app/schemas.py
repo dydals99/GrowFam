@@ -104,19 +104,26 @@ class ScheduleCheckLogResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# User 관련 클래스
-class UserCreate(BaseModel):
+
+class RegisterAllRequest(BaseModel):
     user_name: str
     user_nickname: str
     user_email: str
     user_password: str
-
-    class Config:
-        from_attributes = True
-
+    user_phone: str
+    family_goal: str
+    kid_name: str
+    kid_birthday: str
+    kid_gender: str
+    kid_height: str
+    kid_weight: str
+    
 class NicknameRequest(BaseModel):
     nickname: str
 
+class EmailCheckRequest(BaseModel):
+    email: str
+    
 class EmailVerificationRequest(BaseModel):
     email: EmailStr
 
@@ -133,15 +140,23 @@ class UpdateUserInfoRequest(BaseModel):
     field: str
     value: str
 
+class FindIdRequest(BaseModel):
+    user_name: str
+    user_phone: str
 
+class FindPwRequest(BaseModel):
+    user_email: str
+
+class PhoneCheckRequest(BaseModel):
+    phone: str
+    
 # Family 관련 클래스 
 class FamilyBase(BaseModel):
     family_nickname: Optional[str]
 
 class FamilyCreate(BaseModel):
-    user_no: int  # user_no 필드 추가
-    family_nickname: Optional[str]
-
+    user_no: int  
+    
 class Family(FamilyBase):
     family_no: int
     family_regist_at: datetime
@@ -152,9 +167,6 @@ class Family(FamilyBase):
 
 class FamilyMonthGoalsBase(BaseModel):
     month_golas_contents: str
-
-class FamilyMonthGoalsCreate(FamilyMonthGoalsBase):
-    family_no: int
 
 class FamilyMonthGoals(FamilyMonthGoalsBase):
     month_golas_no: int
@@ -194,7 +206,8 @@ class KidInfoUpdate(BaseModel):
     kid_gender: str
     kid_height: str
     kid_weight: str
-
+    kid_info_regist_at: Optional[datetime] = None  
+    
 class CompareRequest(BaseModel):
     ageInMonths: int
     height: float
