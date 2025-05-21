@@ -28,6 +28,7 @@ const OnCamera: React.FC = () => {
   const [annotUri, setAnnotUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [pitch, setPitch] = useState<number | null>(null);
+  const [tipVisible, setTipVisible] = useState(false);
 
   // 타이머 상태
   const [timerOn, setTimerOn] = useState(false);
@@ -41,7 +42,6 @@ const OnCamera: React.FC = () => {
       if (status !== 'granted') console.warn('카메라 권한이 거부되었습니다.');
     })();
 
-    // DeviceMotion 구독
      const subscription = DeviceMotion.addListener(({ rotation }) => {
       if (rotation?.beta != null) {
         const pitchDeg = (rotation.beta * 180) / Math.PI;
@@ -185,6 +185,65 @@ const OnCamera: React.FC = () => {
               facing={facing}
               ref={cameraRef}
             />
+            {/* 각도 표시 및 수평선 */}
+            <View style={styles.pitchOverlay}>
+              <View style={styles.pitchLineWrap}>
+                {/* 기준선: 항상 중앙(흰색) */}
+                <View style={styles.pitchBaseLine} />
+                {/* 현재 각도선: pitch에 따라 이동, 색상 변화 */}
+                <View
+                  style={[
+                    styles.pitchMoveLine,
+                    {
+                      // pitch가 0이면 중앙, 음수면 위, 양수면 아래로 이동
+                      transform: [
+                        {
+                          translateY:
+                            pitch !== null
+                            ? Math.max(-10, Math.min(10, (pitch - 0) * 2)) // ±5도 기준 최대 15px 이동
+                              : 0,
+                        },
+                      ],
+                      backgroundColor:
+                        pitch !== null && Math.abs(pitch) > 5
+                          ? '#f44336'
+                          : pitch !== null && Math.abs(pitch) > 2
+                          ? '#ffb300'
+                          : '#4caf50',
+                    },
+                  ]}
+                />
+                {/* 각도 숫자 */}
+                <Text style={styles.pitchText} >
+                  {pitch !== null ? `${pitch.toFixed(1)}°` : '-'}
+                </Text>
+              </View>
+            </View>
+            {/* 발끝선 */}
+            <View style={styles.footLineWrap}>
+              <View style={styles.footLine} />
+              <Text style={styles.footLineText}>발끝선</Text>
+            </View>
+            {/* TIP ? 버튼 */}
+            <TouchableOpacity
+              style={styles.tipCircle}
+              onPress={() => setTipVisible(v => !v)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.tipCircleText}>?</Text>
+            </TouchableOpacity>
+            {/* TIP 내용 박스 (토글) */}
+            {tipVisible && (
+              <View style={styles.tipBox}>
+                <Text style={styles.tipTitle}>TIP</Text>
+                <Text style={styles.tipText}>
+                  카메라를 최대한 수평(0°)에 가깝게 유지하세요.{"\n"}
+                  <Text style={{ color: '#4caf50' }}>0~2°: 초록(정상)</Text>{"\n"}
+                  <Text style={{ color: '#ffb300' }}>3~5°: 노랑(주의)</Text>{"\n"}
+                  <Text style={{ color: '#f44336' }}>5° 초과: 빨강(재측정 필요)</Text>
+                </Text>
+              </View>
+            )}
             {/* 뒤로가기 */}
             <TouchableOpacity
               style={styles.headerButton}
@@ -208,7 +267,7 @@ const OnCamera: React.FC = () => {
             </TouchableOpacity>
             {/* 키 입력 오버레이 */}
             <View style={styles.overlay}>
-              <Text style={styles.prompt}>아빠 키를 입력하세요 (cm):</Text>
+              <Text style={styles.prompt}>기준이 될 사람의 키를 입력하세요.(cm):</Text>
               <TextInput
                 style={styles.input}
                 keyboardType="numeric"
@@ -332,7 +391,9 @@ const styles = StyleSheet.create({
     padding: 8 },
   switchButton: {
     position: 'absolute', bottom: 50, right: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)', padding: 10, borderRadius: 25
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    padding: 10, 
+    borderRadius: 25
   },
   timerText: { color: '#fff' },
   overlay: {
@@ -410,7 +471,6 @@ const styles = StyleSheet.create({
     paddingBottom: 10, 
     color: '#fff' },
   compareBtn: {
-    
     backgroundColor: "#b7d6bb",
     paddingVertical: 12,
     borderRadius: 8,
@@ -461,5 +521,120 @@ const styles = StyleSheet.create({
     color: '#888',
     marginTop: 4,
     fontWeight: '600',
+  },
+  pitchOverlay: {
+    position: 'absolute',
+    top: 400,
+    left: 0,
+    width: '100%',
+    alignItems: 'center',
+    zIndex: 30,
+  },
+  pitchLineWrap: {
+    width: 120,
+    height: 50, 
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  pitchBaseLine: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    width: '100%',
+    height: 3,
+    backgroundColor: '#ccc',
+    borderRadius: 2,
+    zIndex: 1,
+  },
+  pitchMoveLine: {
+    position: 'absolute',
+    left: 0,
+    width: '100%',
+    height: 3,
+    borderRadius: 2,
+    zIndex: 2,
+  },
+  pitchText: {
+    position: 'absolute',
+    left: 45,
+    top: -10,
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    minWidth: 40,
+  },
+  tipBox: {
+    position: 'absolute',
+    top: 92, // tipCircle 아래에 위치
+    right: 16,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 10,
+    padding: 10,
+    minWidth: 160,
+    zIndex: 40,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  tipTitle: {
+    fontWeight: 'bold',
+    color: '#222',
+    marginBottom: 2,
+    fontSize: 14,
+  },
+  tipText: {
+    fontSize: 12,
+    color: '#444',
+    lineHeight: 18,
+  },
+   tipCircle: {
+    position: 'absolute',
+    top: 60,
+    right: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 41,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  tipCircleText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    lineHeight: 25,
+  },
+  footLineWrap: {
+    position: 'absolute',
+    bottom: 120, // 촬영 버튼보다 약간 위
+    left: 0,
+    width: '100%',
+    alignItems: 'center',
+    zIndex: 25,
+  },
+  footLine: {
+    width: 180,
+    height: 4,
+    backgroundColor: '#4caf50',
+    borderRadius: 2,
+    opacity: 0.8,
+  },
+  footLineText: {
+    marginTop: 4,
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: 'bold',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
 });
