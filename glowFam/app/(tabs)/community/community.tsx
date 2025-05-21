@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { SafeAreaView, View, Text, StyleSheet, TouchableOpacity, FlatList, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { MaterialIcons } from '@expo/vector-icons';
 import CommunityHeader from './communityHeader';
 import { API_URL } from '../../../constants/config';
 
@@ -34,7 +35,33 @@ export default function Community() {
       }
     }, [currentTab])
   );
-
+  const fetchSearchPosts = async (q: string) => {
+    try {
+      const res = await fetch(`${API_URL}/communities/search?q=${encodeURIComponent(q)}`);
+      if (!res.ok) {
+        throw new Error('검색 실패');
+      }
+      const data: Post[] = await res.json();
+      setPosts(data);
+    } catch (e) {
+      console.error('검색 에러', e);
+      Alert.alert('오류', '검색 중 문제가 발생했습니다.');
+    }
+  };
+  useEffect(() => {
+  if (searchText.trim() === '') {
+    // 검색어가 없으면 탭에 따라 전체/인기 목록 불러오기
+    if (currentTab === 'all') {
+      fetchAllPosts();
+    } else {
+      fetchPopularPosts();
+    }
+  } else {
+    // 검색어가 있으면 검색 API 호출
+    fetchSearchPosts(searchText);
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [searchText, currentTab]);
   // 전체 글 목록 가져오기
   const fetchAllPosts = async () => {
     try {
@@ -93,26 +120,39 @@ export default function Community() {
   };
 
   const renderPost = ({ item }: { item: Post }) => (
-    <TouchableOpacity
-      style={styles.postContainer}
-      onPress={() => {
-        router.push({
-          pathname: '/community/communityDetail',
-          params: { post: JSON.stringify(item) },
-        });
-      }}
-    >
-      <View style={{ flex: 1 }}>
-        <Text style={styles.postTitle}>{item.community_title}</Text>
-        <Text style={styles.postAuthor}>작성자 : {item.user_nickname || "알 수 없음"}</Text>
+  <TouchableOpacity
+    style={styles.postContainer}
+    onPress={() => {
+      router.push({
+        pathname: '/community/communityDetail',
+        params: { post: JSON.stringify(item) },
+      });
+    }}
+  >
+    <View style={{ flex: 1 }}>
+      <Text style={styles.postTitle}>{item.community_title}</Text>
+      <Text style={styles.postAuthor}>작성자 : {item.user_nickname || "알 수 없음"}</Text>
+    </View>
+    <View style={styles.summaryBox}>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <MaterialIcons
+          name="favorite"
+          size={16}
+          color="#e74c3c"
+          style={{ marginRight: 2 }}
+        />
+        <Text style={styles.summaryText}>{item.like_count}</Text>
+        <MaterialIcons
+          name="chat-bubble-outline"
+          size={16}
+          color="#4b4b4b"
+          style={{ marginLeft: 10, marginRight: 2 }}
+        />
+        <Text style={styles.summaryText}>{comentCounts[item.community_no] || 0}</Text>
       </View>
-      <View style={styles.summaryBox}>
-        <Text style={styles.summaryText}>
-          ❤️ {item.like_count}   |   💬 {comentCounts[item.community_no] || 0}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+    </View>
+  </TouchableOpacity>
+);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -179,7 +219,7 @@ export default function Community() {
           });
         }}
       >
-        <Ionicons name="add-circle" size={56} color="#4CAF50" />
+        <Ionicons name="add-circle" size={56} color="#b7d5bb" />
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -197,7 +237,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   tabButton: {
-    backgroundColor: '#C8E6FA',
+    backgroundColor: '#D9E7DB',
     borderRadius: 20,
     paddingHorizontal: 20,
     paddingVertical: 8,
@@ -208,7 +248,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   activeTabButton: {
-    backgroundColor: '#9AD6FD',
+    backgroundColor: '#b7d5bb',
   },
   activeTabButtonText: {
     color: '#000',
@@ -249,7 +289,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   summaryText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#333',
   },

@@ -28,6 +28,7 @@ class Community(Base):
     like_count = Column(Integer, default=0)
     community_regist_at = Column(DateTime(timezone=True), server_default=func.now())
     owner = relationship("User", back_populates="communities")
+    images = relationship("CommunityImage", back_populates="community", cascade="all, delete-orphan")
 
 class CommunityLike(Base):
     __tablename__ = "tb_communitylike"
@@ -44,6 +45,18 @@ class CommunityComent(Base):
     coment_regist_at = Column(DateTime, server_default=func.now(), nullable=False)
     community_no = Column(Integer, ForeignKey("tb_community.community_no", ondelete="CASCADE"), nullable=False)
     user_no = Column(Integer, ForeignKey("tb_users.user_no", ondelete="CASCADE"), nullable=False)
+
+class CommunityImage(Base):
+    __tablename__ = "tb_community_image"
+
+    image_no = Column(Integer, primary_key=True, autoincrement=True)
+    image_path = Column(Text, nullable=False)
+    community_no = Column(Integer, ForeignKey("tb_community.community_no", ondelete="CASCADE"), nullable=False)
+    image_regist_at = Column(DateTime, server_default=func.now(), nullable=False)
+
+    # 관계 설정 (옵션)
+    community = relationship("Community", back_populates="images")
+
 
 class Family(Base):
     __tablename__ = "tb_family"

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TouchableWithoutFeedback, Keyboard, TextInput } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TouchableWithoutFeedback, Keyboard, TextInput, Image } from 'react-native';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { API_URL } from '../../../constants/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialIcons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 
 type Post = {
@@ -12,6 +13,7 @@ type Post = {
   community_regist_at: string;
   user_no: number;
   user_nickname: string;
+  images?: { image_no: number; image_path: string }[];
 };
 
 type Coment = {
@@ -29,30 +31,66 @@ export default function CommunityDetail() {
   const [hasLiked, setHasLiked] = useState<boolean>(false);
   const [showMoreMenu, setShowMoreMenu] = useState<boolean>(false);
   const [comentCounts, setComentCounts] = useState<number>(0);
-  const [userNo, setUserNo] = useState<number | null>(null); // 로그인한 사용자의 user_no
+  const [userNo, setUserNo] = useState<number | null>(null);
   const [coments, setComents] = useState<Coment[]>([]);
   const [loadingComents, setLoadingComents] = useState<boolean>(false);
+  const [post, setPost] = useState<Post | null>(null);
 
-  const post: Post | undefined = params.post ? JSON.parse(params.post) : undefined;
+  useFocusEffect(
+    React.useCallback(() => {
+      setShowMoreMenu(false);
+      return () => setShowMoreMenu(false);
+    }, [])
+  );
+  useEffect(() => {
+  let communityNo: number | undefined;
+  if (params.post) {
+    try {
+      const parsed = JSON.parse(params.post);
+      communityNo = parsed.community_no;
+    } catch (e) {
+      console.error("파싱 에러:", e);
+    }
+  }
+  if (!communityNo) return;
+
+  setPost(null);
+
+  const fetchDetail = async () => {
+    try {
+      const res = await fetch(`${API_URL}/communities/${communityNo}`);
+      if (!res.ok) throw new Error('상세 API 실패');
+      const data = await res.json();
+      setPost(data);
+      // 디버깅용 로그
+      //console.log("상세 post 데이터:", data);
+      if (data.images) {
+       //console.log("이미지 배열:", data.images);
+      }
+    } catch (e) {
+      console.error("상세 API 에러:", e);
+      setPost(null);
+    }
+  };
+  fetchDetail();
+}, [params.post]);
 
   // 사용자 정보 가져오기
   useEffect(() => {
     const fetchUserNo = async () => {
       try {
-        const userNo = await AsyncStorage.getItem("user_no"); // AsyncStorage에서 user_no 가져오기
+        const userNo = await AsyncStorage.getItem("user_no");
         if (!userNo) {
           Alert.alert("로그인이 필요합니다.");
-          router.replace("/users/login"); // 로그인 화면으로 이동
+          router.replace("/users/login");
           return;
         }
-
-        setUserNo(Number(userNo)); // userNo를 상태로 설정
+        setUserNo(Number(userNo));
       } catch (error) {
         console.error("오류 발생:", error);
         Alert.alert("사용자 정보를 가져오는 중 오류가 발생했습니다.");
       }
     };
-
     fetchUserNo();
   }, []);
 
@@ -86,7 +124,7 @@ export default function CommunityDetail() {
       }
       const data = await res.json();
       if (data && data.counts) {
-        const count = data.counts[post.community_no] || 0; // 댓글이 없으면 0으로 설정
+        const count = data.counts[post.community_no] || 0;
         setComentCounts(count);
       } else {
         console.error('예상 못한 API 응답:', data);
@@ -97,12 +135,22 @@ export default function CommunityDetail() {
   };
 
   const toggleLike = async () => {
+    // 즉시 UI 반영
+    if (hasLiked) {
+      setHasLiked(false);
+      setLikeCount(prev => prev - 1);
+    } else {
+      setHasLiked(true);
+      setLikeCount(prev => prev + 1);
+    }
+
     try {
       const res = await fetch(
         `${API_URL}/community-likes/toggle/${post?.community_no}/like?user_no=${userNo}`,
         { method: 'POST' }
       );
       const data = await res.json();
+      // 서버 응답이 실제와 다를 경우 동기화
       if (data.action === 'unliked') {
         setHasLiked(false);
       } else if (data.action === 'liked') {
@@ -110,7 +158,9 @@ export default function CommunityDetail() {
       }
       setLikeCount(data.like_count);
     } catch (error) {
-      console.error('좋아요 토글 실패:', error);
+      // 실패 시 롤백
+      setHasLiked(prev => !prev);
+      setLikeCount(prev => (hasLiked ? prev + 1 : prev - 1));
       Alert.alert('오류', '좋아요 업데이트에 실패했습니다.');
     }
   };
@@ -191,21 +241,46 @@ export default function CommunityDetail() {
       setLoadingComents(false);
     }
   };
-
+  useEffect(() => {
+    if (post && userNo !== null) {
+      fetchLikeStatus();
+      fetchComentCount();
+    }
+  }, [post, userNo]);
   useEffect(() => {
     if (modalVisible) {
       fetchComents();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalVisible]);
 
   if (!post) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>포스트 정보가 없습니다.</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>뒤로가기</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableWithoutFeedback onPress={handleOutsidePress}>
+        <View style={styles.container}>
+          {/* 상단 헤더 영역 */}
+          <View style={styles.headerArea}>
+            <Text style={styles.headerTitle}>Community</Text>
+          </View>
+
+
+          <ScrollView contentContainerStyle={styles.contentContainer}>
+            {/* 본문 */}
+              <View style={{ minHeight: 200, justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={styles.errorText}>포스트 정보가 없습니다.</Text>
+              </View>
+          </ScrollView>
+
+          <View style={styles.footerContainer}>
+            <View style={styles.footerRight}>
+              <TouchableOpacity style={styles.footerLeft} onPress={handleGoList}>
+                <Text style={styles.footerMenuIcon}>≡</Text>
+                <Text style={styles.footerMenuText}>목록으로</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
     );
   }
 
@@ -214,7 +289,7 @@ export default function CommunityDetail() {
       <View style={styles.container}>
         {/* 상단 헤더 영역 */}
         <View style={styles.headerArea}>
-          <Text style={styles.headerTitle}>GlowCommunity</Text>
+          <Text style={styles.headerTitle}>Community</Text>
           <TouchableOpacity style={styles.moreButton} onPress={() => setShowMoreMenu(!showMoreMenu)}>
               {userNo === post?.user_no && (
               <Text style={styles.moreButtonText}>⋮</Text>
@@ -239,10 +314,30 @@ export default function CommunityDetail() {
           <Text style={styles.author}>작성자 : {post.user_nickname}</Text>
           <Text style={styles.date}>
             작성일 :{" "}
-            {post.community_regist_at || dayjs(post.community_regist_at).isValid()
+            {post.community_regist_at && dayjs(post.community_regist_at).isValid()
               ? dayjs(post.community_regist_at).format("YYYY.MM.DD HH:mm")
               : "날짜 정보 없음"}
           </Text>
+          
+          {/* 이미지가 있으면 보여주기 */}
+          {post.images && post.images.length > 0 && (
+            <ScrollView
+              horizontal
+              style={{ marginBottom: 16 }}
+              contentContainerStyle={{ gap: 12 }}
+              showsHorizontalScrollIndicator={false}
+            >
+              {post.images.map(img => (
+                <Image
+                  key={img.image_no}
+                  source={{ uri: API_URL + img.image_path }}
+                  style={{ width: 100, height: 100, borderRadius: 10, backgroundColor: '#eee' }}
+                  resizeMode="cover"
+                />
+              ))}
+            </ScrollView>
+          )}
+
           <TextInput
             value={post.community_content}
             editable={false}
@@ -259,15 +354,24 @@ export default function CommunityDetail() {
 
           <View style={styles.footerRight}>
             <TouchableOpacity style={styles.iconButton} onPress={toggleLike}>
-              <Text style={styles.iconText}>
-                {hasLiked ? "❤️" : "🤍"} {likeCount}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <MaterialIcons
+                  name={hasLiked ? "favorite" : "favorite-border"}
+                  size={22}
+                  color={hasLiked ? "#e74c3c" : "#AEADAA"}
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={styles.iconText}>{likeCount}</Text>
+              </View>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.iconButton, { marginLeft: 25 }]}
               onPress={() => router.push(`/community/communityComent?communityNo=${post.community_no}&userNo=${userNo}`)}
             >
-              <Text style={styles.iconText}>💬 {comentCounts || 0}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <MaterialIcons name="chat-bubble-outline" size={22} color="#AEADAA" style={{ marginRight: 4 }} />
+                <Text style={styles.iconText}>{comentCounts || 0}</Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>  
@@ -378,13 +482,13 @@ const styles = StyleSheet.create({
   },
   footerMenuIcon: {
     fontSize: 24,
-    color: "#4CAF50",
+    color: "#AEADAA",
     fontWeight: "bold",
     marginRight: 8,
   },
   footerMenuText: {
     fontSize: 16,
-    color: "#4CAF50",
+    color: "#AEADAA",
     fontWeight: "bold",
   },
   footerRight: {
@@ -396,7 +500,7 @@ const styles = StyleSheet.create({
   },
   iconText: {
     fontSize: 16,
-    color: "#4CAF50",
+    color: "#AEADAA",
     fontWeight: "bold",
   },
   errorText: {

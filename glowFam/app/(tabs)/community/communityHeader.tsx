@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 
 type CommunityHeaderProps = {
   searchText: string;
@@ -16,15 +17,18 @@ export default function CommunityHeader({
   return (
     <View style={styles.headerContainer}>
       <Text style={styles.header}>커뮤니티</Text>
-      <TextInput
-        style={styles.searchBar}
-        placeholder="궁금하신 점을 입력해주세요" 
-        placeholderTextColor="#aaa" 
-        value={searchText}
-        onChangeText={setSearchText}
-        onFocus={() => setSearchFocused(true)}
-        onBlur={() => setSearchFocused(false)}
-      />
+      <View style={styles.searchBarWrapper}>
+        <MaterialIcons name="search" size={22} color="#aaa" style={{ marginLeft: 10 }} />
+        <TextInput
+          style={styles.searchBar}
+          placeholder="궁금하신 점을 입력해주세요"
+          placeholderTextColor="#aaa"
+          value={searchText}
+          onChangeText={setSearchText}
+          onFocus={() => setSearchFocused(true)}
+          onBlur={() => setSearchFocused(false)}
+        />
+      </View>
     </View>
   );
 }
@@ -39,13 +43,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginVertical: 12,
   },
-  searchBar: {
-    backgroundColor: '#b7d6bb',
+  searchBarWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
     marginHorizontal: 16,
     borderRadius: 20,
-    paddingHorizontal: 16,
+    borderColor: '#ccc',
+    borderWidth: 2,
     height: 40,
-    fontSize: 14,
+    // 그림자 효과
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3, // Android
   },
- 
+  searchBar: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 10,
+    fontSize: 14,
+    height: 40,
+  },
 });

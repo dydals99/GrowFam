@@ -16,6 +16,10 @@ class CommunityUpdate(BaseModel):
     community_title: Optional[str] = None
     community_content: Optional[str] = None
 
+class CommunityImageOut(BaseModel):
+    image_no: int
+    image_path: str
+
 class CommunityOut(BaseModel):
     community_no: int
     community_title: str
@@ -24,6 +28,10 @@ class CommunityOut(BaseModel):
     community_regist_at: datetime
     like_count: int
     user_nickname: str
+    images: Optional[List[CommunityImageOut]] = []  # ← 이 부분 추가
+
+    class Config:
+        from_attributes = True
     
     class Config:
         from_attributes = True
