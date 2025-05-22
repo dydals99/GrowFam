@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TouchableWithoutFeedback, Keyboard, TextInput, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TouchableWithoutFeedback, Keyboard, TextInput, Image, Modal, Dimensions } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { API_URL } from '../../../constants/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -35,6 +35,8 @@ export default function CommunityDetail() {
   const [coments, setComents] = useState<Coment[]>([]);
   const [loadingComents, setLoadingComents] = useState<boolean>(false);
   const [post, setPost] = useState<Post | null>(null);
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -55,6 +57,8 @@ export default function CommunityDetail() {
   if (!communityNo) return;
 
   setPost(null);
+  
+  
 
   const fetchDetail = async () => {
     try {
@@ -251,9 +255,13 @@ export default function CommunityDetail() {
     if (modalVisible) {
       fetchComents();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalVisible]);
 
+  // 이미지 클릭 핸들러
+  const handleImagePress = (uri: string) => {
+    setSelectedImageUri(uri);
+    setImageModalVisible(true);
+  };
   if (!post) {
     return (
       <TouchableWithoutFeedback onPress={handleOutsidePress}>
@@ -328,12 +336,17 @@ export default function CommunityDetail() {
               showsHorizontalScrollIndicator={false}
             >
               {post.images.map(img => (
-                <Image
+                <TouchableOpacity
                   key={img.image_no}
-                  source={{ uri: API_URL + img.image_path }}
-                  style={{ width: 100, height: 100, borderRadius: 10, backgroundColor: '#eee' }}
-                  resizeMode="cover"
-                />
+                  onPress={() => handleImagePress(API_URL + img.image_path)}
+                  activeOpacity={0.8}
+                >
+                  <Image
+                    source={{ uri: API_URL + img.image_path }}
+                    style={{ width: 100, height: 100, borderRadius: 10, backgroundColor: '#eee' }}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
               ))}
             </ScrollView>
           )}
@@ -344,8 +357,26 @@ export default function CommunityDetail() {
             multiline={true}
             style={styles.bodyText}
           />
-        </ScrollView>
-
+          </ScrollView>
+            {/* 전체화면 이미지 모달 */}
+            <Modal
+            visible={imageModalVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setImageModalVisible(false)}>
+          
+            <TouchableWithoutFeedback onPress={() => setImageModalVisible(false)}>
+              <View style={styles.modalBackground}>
+                {selectedImageUri && (
+                  <Image
+                    source={{ uri: selectedImageUri }}
+                    style={styles.fullScreenImage}
+                    resizeMode="contain"
+                  />
+                )}
+              </View>
+            </TouchableWithoutFeedback>
+          </Modal>
         <View style={styles.footerContainer}>
           <TouchableOpacity style={styles.footerLeft} onPress={handleGoList}>
             <Text style={styles.footerMenuIcon}>≡</Text>
@@ -379,6 +410,7 @@ export default function CommunityDetail() {
     </TouchableWithoutFeedback>
   );
 }
+const { width, height } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
@@ -508,5 +540,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
     color: "#333",
+  },
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenImage: {
+    width: width,
+    height: height,
+    maxWidth: width,
+    maxHeight: height,
   },
 });

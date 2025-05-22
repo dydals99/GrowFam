@@ -38,7 +38,7 @@ def read_communities(
         .all()
     )
 
-    print("Fetched posts:", posts)  # 디버깅용 출력
+    #print("Fetched posts:", posts)  # 디버깅용 출력
 
     return [
         {
@@ -150,9 +150,9 @@ def search_communities(
         )
         .join(models.User, models.Community.user_no == models.User.user_no)
         .filter(
-            func.replace(models.Community.community_title, " ", "").ilike(f"%{q_no_space}%") |
-            func.replace(models.Community.community_content, " ", "").ilike(f"%{q_no_space}%") |
-            func.replace(models.User.user_nickname, " ", "").ilike(f"%{q_no_space}%")
+            func.replace(models.Community.community_title, " ", "").ilike(f"%{q_no_space}%")
+            # func.replace(models.Community.community_content, " ", "").ilike(f"%{q_no_space}%") |
+            # func.replace(models.User.user_nickname, " ", "").ilike(f"%{q_no_space}%")
         )
         .order_by(models.Community.community_regist_at.desc())
         .all()

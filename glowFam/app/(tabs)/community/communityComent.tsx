@@ -149,13 +149,11 @@ const CommunityComent = () => {
                     placeholderTextColor="#bbb"
                     autoFocus
                     multiline
-                    maxLength={6000}
+                    maxLength={1000}
                   />
                   <View style={styles.commentInputBottomRow}>
-                    <MaterialCommunityIcons name="emoticon-outline" size={24} color="#bbb" style={{ marginRight: 8 }} />
-                    <MaterialCommunityIcons name="camera-outline" size={24} color="#bbb" style={{ marginRight: 8 }} />
                     <View style={{ flex: 1 }} />
-                    <Text style={styles.commentLength}>{newComent.length}/6000</Text>
+                    <Text style={styles.commentLength}>{newComent.length}/1000</Text>
                     <TouchableOpacity
                       style={styles.commentCancelBtn}
                       onPress={() => {
@@ -294,12 +292,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0e0e0',
   },
   commentSubmitText: {
-    color: '#fff',
+    color: '#ccc',
     fontSize: 15,
     fontWeight: 'bold',
   },
   commentSubmitTextDisabled: {
-    color: '#bbb',
+    color: '#000',
   },
   comentContainer: {
     padding: 16,
