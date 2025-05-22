@@ -135,13 +135,13 @@ export default function CommunityEdit() {
         <TouchableOpacity onPress={pickImage}>
           <MaterialCommunityIcons name="image-plus" size={28} color="#888" />
         </TouchableOpacity>
-        <ScrollView horizontal style={{ marginLeft: 10 }}>
+        <ScrollView horizontal style={{ marginLeft: 10, height:80 }}>
           {/* 기존 이미지 미리보기 */}
           {originImages.map((img: any, idx: number) => (
             <View key={`origin-${img.image_no}`} style={{ position: 'relative', marginRight: 8 }}>
               <Image
                 source={{ uri: API_URL + img.image_path }}
-                style={{ width: 40, height: 40, borderRadius: 6 }}
+                style={{ width: 50, height: 50, borderRadius: 6, top: 15 }}
               />
               <TouchableOpacity
                 style={styles.removeImageButton}
@@ -245,9 +245,9 @@ const styles = StyleSheet.create({
   },
   removeImageButton: {
     position: 'absolute',
-    top: 20,
+    top: 10,
     right: -8,
-    backgroundColor: '#fff',
+    backgroundColor: '#ccc',
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#ccc',
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   removeImageText: {
-    color: '#888',
+    color: '#fff',
     fontSize: 14,
     fontWeight: 'bold',
   },

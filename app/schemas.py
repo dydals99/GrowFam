@@ -59,10 +59,18 @@ class CommunityComentCreate(CommunityComentBase):
 class CommunityComentUpdate(BaseModel):
     coment_content: Optional[str] = None
 
+class CommunityComentImageOut(BaseModel):
+    coment_image_no: int
+    coment_image_path: str
+
+    class Config:
+        from_attributes = True
+
 class CommunityComentOut(CommunityComentBase):
     coment_no: int
-    coment_regist_at: datetime  # 필드 이름을 DB와 일치하도록 수정
-    user_nickname: str  # 사용자 닉네임 추가
+    coment_regist_at: datetime
+    user_nickname: str
+    images: Optional[List[CommunityComentImageOut]] = []  # 추가
 
     class Config:
         from_attributes = True

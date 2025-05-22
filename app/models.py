@@ -56,7 +56,14 @@ class CommunityImage(Base):
 
     # 관계 설정 (옵션)
     community = relationship("Community", back_populates="images")
+    
+class CommunityComentImage(Base):
+    __tablename__ = "tb_community_coment_image"
 
+    coment_image_no = Column(Integer, primary_key=True, autoincrement=True)
+    coment_image_path = Column(Text, nullable=False)
+    coment_no = Column(Integer, ForeignKey("tb_community_coment.coment_no", ondelete="CASCADE"), nullable=False)
+    coment_image_regist_at = Column(DateTime, server_default=func.now(), nullable=False)
 
 class Family(Base):
     __tablename__ = "tb_family"

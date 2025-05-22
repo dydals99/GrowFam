@@ -124,10 +124,10 @@ export default function CommunityWrite() {
         <TouchableOpacity onPress={pickImage}>
           <MaterialCommunityIcons name="image-plus" size={28} color="#888" />
         </TouchableOpacity>
-        <ScrollView horizontal style={{ marginLeft: 10 }}>
+        <ScrollView horizontal style={{ marginLeft: 10, height:80 }}>
           {images.map((img, idx) => (
             <View key={idx} style={{ position: 'relative', marginRight: 10 }}>
-              <Image source={{ uri: img }} style={{ width: 40, height: 40, borderRadius: 6 }} />
+              <Image source={{ uri: img }} style={{ width: 50, height: 50, borderRadius: 6, top: 15 }}/>
               <TouchableOpacity
                 style={styles.removeImageButton}
                 onPress={() => removeImage(idx)}
@@ -238,12 +238,12 @@ const styles = StyleSheet.create({
   },
   removeImageButton: {
     position: 'absolute',
-    top: 20,
+    top: 10,
     right: -8,
-    backgroundColor: '#fff',
+    backgroundColor: '#ddd',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#ddd',
     width: 20,
     height: 20,
     justifyContent: 'center',
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   removeImageText: {
-    color: '#888',
+    color: '#fff',
     fontSize: 14,
     fontWeight: 'bold',
   },

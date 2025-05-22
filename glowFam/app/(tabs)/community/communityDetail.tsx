@@ -25,7 +25,6 @@ type Coment = {
 
 export default function CommunityDetail() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ post?: string }>();
   const [modalVisible, setModalVisible] = useState(false);
   const [likeCount, setLikeCount] = useState<number>(0);
   const [hasLiked, setHasLiked] = useState<boolean>(false);
@@ -37,6 +36,7 @@ export default function CommunityDetail() {
   const [post, setPost] = useState<Post | null>(null);
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
+  const params = useLocalSearchParams<{ post?: string; comentCounts?: string }>();
 
   useFocusEffect(
     React.useCallback(() => {
@@ -44,6 +44,12 @@ export default function CommunityDetail() {
       return () => setShowMoreMenu(false);
     }, [])
   );
+  useEffect(() => {
+  if (params.comentCounts) {
+    setComentCounts(Number(params.comentCounts));
+  }
+}, [params.comentCounts]);
+
   useEffect(() => {
   let communityNo: number | undefined;
   if (params.post) {
