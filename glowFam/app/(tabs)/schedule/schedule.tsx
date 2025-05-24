@@ -1,20 +1,13 @@
 import React, { useState, useCallback, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  Alert,
-  TouchableOpacity,
-  Modal,
-  ScrollView,
-  TextInput
-} from "react-native";
+import { View, Text, StyleSheet, SafeAreaView, Alert, TouchableOpacity, Modal, ScrollView, TextInput} from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
 import { useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_URL } from "../../../constants/config";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import { router } from 'expo-router'
 
 // --- 한국어 로케일 설정 ---
 LocaleConfig.locales["kr"] = {
@@ -84,14 +77,70 @@ const logsSchedules = (data: any[]): { familyNo: number; scheduleCheckLog: Date 
   }));
 };
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,    // true여야 알림이 화면에 표시됨
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 export default function ScheduleScreen() {
   const [monthGoal, setMonthGoal] = useState("");
   const [markedDates, setMarkedDates] = useState({});
   const [registeredSchedules, setRegisteredSchedules] = useState<ScheduleType[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [newScheduleContent, setNewScheduleContent] = useState("");
-  const [selectedTime, setSelectedTime] = useState(new Date());
+  const [selectedTime, setSelectedTime] = useState(() => {
+    const d = new Date();
+    d.setHours(9, 0, 0, 0); // 오전 9시 0분 0초
+    return d;
+  });
+  const scheduleTime = selectedTime.toTimeString().slice(0, 8);
 
+  useEffect(() => {
+    //console.log("Constants.isDevice:", Device.isDevice); // ← 여기!
+    const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+      router.push('/(tabs)/schedule/schedule')
+    });
+    // 푸시 권한 요청 및 토큰 서버 전송
+    async function registerPushToken() {
+      if (Device.isDevice) {
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+        if (existingStatus !== 'granted') {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+        if (finalStatus === 'granted') {
+          const token = (await Notifications.getExpoPushTokenAsync()).data;
+          const userNo = await AsyncStorage.getItem("user_no");
+          if (userNo && token) {
+            await fetch(`${API_URL}/schedule/push-token`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ user_no: userNo, push_token: token }),
+            });
+          }
+        } else {
+          Alert.alert("알림", "푸시 알림 권한이 필요합니다.");
+        }
+      } else {
+        Alert.alert("알림", "실제 기기에서만 푸시 알림을 사용할 수 있습니다.");
+      }
+    }
+    registerPushToken();
+  }, []);
+  
+  function formatKoreanTime(date: Date) {
+    const hour = date.getHours();
+    const minute = date.getMinutes();
+    const isAM = hour < 12;
+    const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+    const ampm = isAM ? "오전" : "오후";
+    return `${ampm} ${displayHour}:${String(minute).padStart(2, "0")}`;
+  }
   const getTodayString = () => {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(
@@ -135,18 +184,6 @@ export default function ScheduleScreen() {
       Alert.alert("오류", error.message);
     }
   };
-
-  // const fetchFamilyGoal = async () => {
-  //   try {
-  //     const response = await fetch(`${API_URL}/schedule/family-goal/${family_no}`);
-  //     if (!response.ok) throw new Error("가족 목표 조회에 실패했습니다.");
-  //     const data = await response.json();
-  //     setMonthGoal(data.month_golas_contents || "목표가 설정되어 있지 않습니다.");
-  //   } catch (error: any) {
-  //     Alert.alert("오류", error.message);
-  //   }
-  // };
-
   const fetchSchedules = async () => {
     try {
       const response = await fetch(`${API_URL}/schedule/${family_no}`);
@@ -172,7 +209,6 @@ export default function ScheduleScreen() {
     try {
       const response = await fetch(`${API_URL}/schedule/check-logs/${family_no}`);
       if (!response.ok) {
-        // 일정이 없을 때는 에러 대신 안내만!
         setMarkedDates({});
         return;
       }
@@ -223,6 +259,7 @@ export default function ScheduleScreen() {
           family_no,
           schedule_cotents: newScheduleContent,
           schedule_date: scheduleDate,
+          schedule_time: scheduleTime,
           schedule_check_count: remainingDays
         })
       });
@@ -268,12 +305,6 @@ export default function ScheduleScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
-        {/**
-        <View style={styles.goalSection}>
-          <Text style={styles.goalLabel}>이달의 목표</Text>
-          <Text style={styles.goalText}>{monthGoal}</Text>
-        </View>
-         */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>일정</Text>
@@ -332,13 +363,21 @@ export default function ScheduleScreen() {
               onChangeText={setNewScheduleContent}
             />
 
-            <Text style={styles.modalLabel}>시간 선택</Text>
-            <DateTimePicker
-              value={selectedTime}
-              mode="time"
-              display="default"
-              onChange={(e, date) => date && setSelectedTime(date)}
-            />
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
+              <Text style={[styles.modalLabel, { marginBottom: 0 }]}>시간 선택</Text>
+              <Text style={{ marginLeft: 8, fontSize: 16, color: "#333" }}>
+                {formatKoreanTime(selectedTime)}
+              </Text>
+              <View style={{ flex: 1 }} />
+              <DateTimePicker
+                value={selectedTime}
+                mode="time"
+                display="default"
+                onChange={(e, date) => date && setSelectedTime(date)}
+                style={{ width: 120 }}
+              />
+            </View>
+            
 
             <View style={styles.modalButtons}>
               <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={() => setModalVisible(false)}>

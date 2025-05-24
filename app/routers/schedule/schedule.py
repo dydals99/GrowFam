@@ -2,21 +2,70 @@ from calendar import monthrange
 from typing import List
 from fastapi import APIRouter, Body, HTTPException, Depends
 from sqlalchemy.orm import Session
-from datetime import datetime, date
+from datetime import  date, time
+import datetime
 from pydantic import BaseModel
 from app.database import get_db 
-from app.models import Schedule, ScheduleCheck,ScheduleCheckLog
-from app.schemas import ScheduleCheckLogResponse
+from app.models import Schedule, ScheduleCheck,ScheduleCheckLog, UserPushToken
+from app.schemas import ScheduleCheckLogResponse, ScheduleCreate
+import requests
+from apscheduler.schedulers.background import BackgroundScheduler
 
 router = APIRouter(
     prefix="/schedule",
     tags=["schedule"])
 
-class ScheduleCreate(BaseModel):
-    family_no: int
-    schedule_cotents: str
-    schedule_date: datetime
-    schedule_check_count: int
+scheduler = BackgroundScheduler()
+scheduler.start()
+
+def send_expo_push(token: str, title: str, body: str):
+    url = "https://exp.host/--/api/v2/push/send"
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+    data = {
+        "to": token,
+        "title": title,
+        "body": body,
+        "sound": "default"
+    }
+    try:
+        response = requests.post(url, json=data, headers=headers)
+        return response.json()
+    except Exception as e:
+        print("Expo Push Error:", e)
+        return None
+    
+def schedule_push_daily(token, title, body, start_time):
+    scheduler.add_job(
+        send_expo_push,
+        'interval',
+        days=1,
+        start_date=start_time,
+        args=[token, title, body],
+        id=f"{token}_{start_time}",  # 중복 예약 방지용 id
+        replace_existing=True
+    )
+@router.post("/push-token")
+def save_push_token(
+    data: dict = Body(...),
+    db: Session = Depends(get_db)
+):
+    user_no = data.get("user_no")
+    push_token = data.get("push_token")
+    if not user_no or not push_token:
+        raise HTTPException(status_code=400, detail="user_no와 push_token이 필요합니다.")
+
+    # 이미 토큰이 있으면 업데이트, 없으면 생성
+    token_obj = db.query(UserPushToken).filter(UserPushToken.user_no == user_no).first()
+    if token_obj:
+        token_obj.push_token = push_token
+    else:
+        token_obj = UserPushToken(user_no=user_no, push_token=push_token)
+        db.add(token_obj)
+    db.commit()
+    return {"message": "푸시 토큰 저장 완료"}
 
 @router.get("/{family_no}", response_model=List[dict])
 def get_schedules(family_no: int, db: Session = Depends(get_db)):
@@ -42,7 +91,6 @@ def get_schedules(family_no: int, db: Session = Depends(get_db)):
 @router.post("/write", response_model=dict)
 def create_schedule(schedule_data: ScheduleCreate, db: Session = Depends(get_db)):
     try:
-        # 남은 날짜 계산
         today = date.today()
         schedule_date = schedule_data.schedule_date.date()
         remaining_days = (schedule_date.replace(day=monthrange(schedule_date.year, schedule_date.month)[1]) - today).days + 1
@@ -50,12 +98,14 @@ def create_schedule(schedule_data: ScheduleCreate, db: Session = Depends(get_db)
         if remaining_days < 0:
             remaining_days = 0
 
-        # tb_schedule에 데이터 삽입
+        # tb_schedule에 데이터 삽입 (schedule_time 추가)
+        schedule_time_obj = datetime.time.fromisoformat(schedule_data.schedule_time)
         new_schedule = Schedule(
             family_no=schedule_data.family_no,
             schedule_cotents=schedule_data.schedule_cotents,
             schedule_date=schedule_data.schedule_date,
-            schedule_total_count=remaining_days  # 총 체크 가능한 횟수 저장
+            schedule_time=schedule_time_obj, 
+            schedule_total_count=remaining_days
         )
         db.add(new_schedule)
         db.commit()
@@ -64,7 +114,7 @@ def create_schedule(schedule_data: ScheduleCreate, db: Session = Depends(get_db)
         # tb_schedule_check에 기본값으로 데이터 삽입
         new_schedule_check = ScheduleCheck(
             schedule_no=new_schedule.schedule_no,
-            schedule_check_count=0  # 기본값 0
+            schedule_check_count=0
         )
         db.add(new_schedule_check)
         db.commit()
@@ -72,15 +122,45 @@ def create_schedule(schedule_data: ScheduleCreate, db: Session = Depends(get_db)
         # tb_schedule_check_log에 기본 로그 추가
         new_schedule_check_log = ScheduleCheckLog(
             family_no=schedule_data.family_no,
-            
+            # 필요한 필드 추가
         )
         db.add(new_schedule_check_log)
         db.commit()
+
+        # 가족 구성원의 푸시 토큰 조회 (family_no 컬럼이 없으면 user_no로 조회)
+        user_tokens = db.query(UserPushToken.push_token).all()
+
+        # 반복 예약 발송 시간 계산
+        if isinstance(schedule_data.schedule_date, str):
+            schedule_date_obj = datetime.datetime.fromisoformat(schedule_data.schedule_date)
+        else:
+            schedule_date_obj = schedule_data.schedule_date
+
+        if isinstance(schedule_data.schedule_time, str):
+            schedule_time_obj = datetime.time.fromisoformat(schedule_data.schedule_time)
+        else:
+            schedule_time_obj = schedule_data.schedule_time
+
+        start_time = datetime.datetime.combine(
+            schedule_date_obj.date(),
+            schedule_time_obj
+        )
+        print("매일 반복 예약 시작 시간:", start_time)
+
+        for (token,) in user_tokens:
+            print("매일 반복 푸시 예약:", token, start_time)
+            schedule_push_daily(
+                token,
+                title="일정 알림",
+                body=f"{schedule_data.schedule_cotents} ({schedule_data.schedule_time})",
+                start_time=start_time
+            )
 
         return {
             "scheduleNo": new_schedule.schedule_no,
             "scheduleContent": new_schedule.schedule_cotents,
             "scheduleDate": new_schedule.schedule_date,
+            "scheduleTime": str(new_schedule.schedule_time),
             "scheduleTotalCount": new_schedule.schedule_total_count,
         }
     except Exception as e:

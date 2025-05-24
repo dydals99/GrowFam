@@ -92,7 +92,9 @@
     "react-native-vector-icons": "^10.2.0",
     "react-native-web": "^0.20.0",
     "react-native-webview": "13.13.5",
-    "react-router-dom": "^7.5.0"
+    "react-router-dom": "^7.5.0",
+    "expo-notifications": "~0.31.2",
+    "expo-device": "~7.1.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

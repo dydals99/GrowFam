@@ -90,9 +90,10 @@ class ComentResponse(BaseModel):
 
 # Schedule 관련 클래스
 class ScheduleCreate(BaseModel):
-    famliy_no: int
+    family_no: int
     schedule_cotents: str
     schedule_date: datetime
+    schedule_time: str
     schedule_check_count: int
 
 # 일정 조회 시 사용하는 스키마
@@ -100,6 +101,7 @@ class ScheduleRead(BaseModel):
     schedule_no: int
     schedule_cotents: str
     schedule_date: datetime
+    schedule_time: str
     schedule_check_count: int
 
     class Config:

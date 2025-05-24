@@ -26,7 +26,10 @@ const GlowFamScreen: React.FC = () => {
   const [myRank, setMyRank] = useState(0);
   const [totalFamilies, setTotalFamilies] = useState(0);
 
-  const [page, setPage] = useState(0); // 0: 목표 달성률
+  const totalCompleted = goalProgress.reduce((sum, g) => sum + g.completedCount, 0);
+  const totalCount = goalProgress.reduce((sum, g) => sum + g.totalCount, 0);
+  const totalPercent = totalCount > 0 ? Math.round((totalCompleted / totalCount) * 100) : 0;
+
   const router = useRouter();
 
   // family_no를 먼저 가져와서 진행률 통계 조회
@@ -138,27 +141,20 @@ const GlowFamScreen: React.FC = () => {
           </View>
           <View style={styles.familyGoalsContainer}>
             <Text style={styles.familySectionTitle}>우리 가족 전체일정 달성률</Text>
-            {goalProgress.length > 0 ? (
-              goalProgress.map((goal, index) => (
-                <View key={index} style={styles.familyGoalItem}>
-                  
-                  <View style={{ flexDirection: "row", alignItems: "center", marginTop: 5 }}>
-                    <View style={styles.familyProgressBarBackground}>
-                      <View
-                        style={{
-                          ...styles.familyProgressBarFill,
-                          width: `${(goal.completedCount / goal.totalCount) * 100}%`,
-                        }}
-                      />
-                    </View>
-                    <Text style={styles.familyGoalCount}>
-                      {goal.totalCount > 0
-                        ? `${Math.round((goal.completedCount / goal.totalCount) * 100)}%`
-                        : '0%'}
-                    </Text>
-                  </View>
+            {totalCount > 0 ? (
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 5 }}>
+                <View style={styles.familyProgressBarBackground}>
+                  <View
+                    style={{
+                      ...styles.familyProgressBarFill,
+                      width: `${(totalCompleted / totalCount) * 100}%`,
+                    }}
+                  />
                 </View>
-              ))
+                <Text style={styles.familyGoalCount}>
+                  {totalPercent}%
+                </Text>
+              </View>
             ) : (
               <Text style={styles.familyNoGoalsText}>현재 목표가 없습니다.</Text>
             )}

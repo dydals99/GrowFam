@@ -1,4 +1,4 @@
-from sqlalchemy import TIMESTAMP, Column, ForeignKey, Integer, String, DateTime, Text, UniqueConstraint
+from sqlalchemy import TIMESTAMP,TIME, Column, ForeignKey, Integer, String, DateTime, Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -97,12 +97,19 @@ class Measure(Base):
     measure_height = Column(String(100))
     measure_regist_at = Column(TIMESTAMP, server_default=func.now())
 
+class UserPushToken(Base):
+    __tablename__ = "tb_user_push_token"
+    pushToken_no = Column("pushtoken_no", Integer, primary_key=True, autoincrement=True)
+    user_no = Column(Integer, nullable=False, unique=True)
+    push_token = Column(String(255), nullable=False)
+
 class Schedule(Base):
     __tablename__ = "tb_schedule"
     schedule_no = Column(Integer, primary_key=True, index=True)
     family_no = Column(Integer, ForeignKey("tb_family.family_no"), nullable=False)
     schedule_cotents = Column(String(255))  # 일정 내용
     schedule_date = Column(TIMESTAMP, server_default=func.now())
+    schedule_time = Column(TIME, nullable=False, default='09:00:00')
     schedule_total_count = Column(Integer, nullable=False)  # 총 체크 가능한 횟수 추가
 
 class ScheduleCheck(Base):
