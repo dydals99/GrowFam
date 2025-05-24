@@ -220,10 +220,12 @@ const OnCamera: React.FC = () => {
               </View>
             </View>
             {/* 발끝선 */}
+            {/*
             <View style={styles.footLineWrap}>
               <View style={styles.footLine} />
               <Text style={styles.footLineText}>발끝선</Text>
             </View>
+            */}
             {/* TIP ? 버튼 */}
             <TouchableOpacity
               style={styles.tipCircle}

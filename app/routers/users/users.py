@@ -7,7 +7,7 @@ from email.mime.text import MIMEText
 from app.utils import create_access_token, get_current_user
 from app.schemas import NicknameRequest, EmailVerificationRequest, EmailVerificationConfirmRequest, LoginRequest, UpdateUserInfoRequest
 from app.schemas import RegisterAllRequest, EmailCheckRequest, FindPwRequest, FindIdRequest, PhoneCheckRequest
-from app.models import User, Family, FamilyMonthGoals, KidInfo
+from app.models import User, Family, KidInfo
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import timedelta
 import random
@@ -140,39 +140,32 @@ def register_all(data: RegisterAllRequest, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(new_family)
 
-        # 3. FamilyMonthGoals 생성
-        db_goal = FamilyMonthGoals(
-            family_no=new_family.family_no,
-            month_golas_contents=data.family_goal
-        )
-        db.add(db_goal)
-        db.commit()
-        db.refresh(db_goal)
-
         # 4. KidInfo 생성
-        db_kid = KidInfo(
-            family_no=new_family.family_no,
-            kid_name=data.kid_name,
-            kid_birthday=data.kid_birthday,
-            kid_gender=data.kid_gender,
-            kid_height=data.kid_height,
-            kid_weight=data.kid_weight
-        )
-        db.add(db_kid)
+        kid_objs = []
+        for kid in data.kids:
+            db_kid = KidInfo(
+                family_no=new_family.family_no,
+                kid_name=kid.kid_name,
+                kid_birthday=kid.kid_birthday,
+                kid_gender=kid.kid_gender,
+                kid_height=kid.kid_height,
+                kid_weight=kid.kid_weight
+            )
+            db.add(db_kid)
+            kid_objs.append(db_kid)
         db.commit()
-        db.refresh(db_kid)
 
         return {
             "success": True,
             "user_no": new_user.user_no,
             "family_no": new_family.family_no,
-            "goal": db_goal,
-            "kid": db_kid
+            "kids": [k.kid_name for k in kid_objs]
         }
     except SQLAlchemyError as e:
         db.rollback()
+        import traceback
+        print(traceback.format_exc())  # 서버 콘솔에 전체 에러 출력
         raise HTTPException(status_code=500, detail=f"회원가입 전체 트랜잭션 실패: {str(e)}")
-
 
 @router.post("/login")
 def login(request: LoginRequest, db: Session = Depends(get_db)):

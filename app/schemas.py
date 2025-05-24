@@ -121,18 +121,21 @@ class ScheduleCheckLogResponse(BaseModel):
         from_attributes = True
 
 
+class KidInfoRequest(BaseModel):
+    kid_name: str
+    kid_birthday: str
+    kid_gender: str
+    kid_height: str
+    kid_weight: str
+
 class RegisterAllRequest(BaseModel):
     user_name: str
     user_nickname: str
     user_email: str
     user_password: str
     user_phone: str
-    family_goal: str
-    kid_name: str
-    kid_birthday: str
-    kid_gender: str
-    kid_height: str
-    kid_weight: str
+    kids: List[KidInfoRequest]
+    
     
 class NicknameRequest(BaseModel):
     nickname: str

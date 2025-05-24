@@ -136,16 +136,16 @@ export default function ScheduleScreen() {
     }
   };
 
-  const fetchFamilyGoal = async () => {
-    try {
-      const response = await fetch(`${API_URL}/schedule/family-goal/${family_no}`);
-      if (!response.ok) throw new Error("가족 목표 조회에 실패했습니다.");
-      const data = await response.json();
-      setMonthGoal(data.month_golas_contents || "목표가 설정되어 있지 않습니다.");
-    } catch (error: any) {
-      Alert.alert("오류", error.message);
-    }
-  };
+  // const fetchFamilyGoal = async () => {
+  //   try {
+  //     const response = await fetch(`${API_URL}/schedule/family-goal/${family_no}`);
+  //     if (!response.ok) throw new Error("가족 목표 조회에 실패했습니다.");
+  //     const data = await response.json();
+  //     setMonthGoal(data.month_golas_contents || "목표가 설정되어 있지 않습니다.");
+  //   } catch (error: any) {
+  //     Alert.alert("오류", error.message);
+  //   }
+  // };
 
   const fetchSchedules = async () => {
     try {
@@ -171,7 +171,11 @@ export default function ScheduleScreen() {
   const fetchScheduleCheckLogs = async () => {
     try {
       const response = await fetch(`${API_URL}/schedule/check-logs/${family_no}`);
-      if (!response.ok) throw new Error("체크 로그를 가져오는데 실패했습니다.");
+      if (!response.ok) {
+        // 일정이 없을 때는 에러 대신 안내만!
+        setMarkedDates({});
+        return;
+      }
       const data: ScheduleCheckLog[] = await response.json();
       const parsedLogs = logsSchedules(data);
 
@@ -196,6 +200,7 @@ export default function ScheduleScreen() {
       );
       setMarkedDates((prev) => ({ ...prev, ...marked }));
     } catch (error: any) {
+      // 네트워크 등 진짜 에러만 알림
       Alert.alert("오류", error.message);
     }
   };
@@ -252,7 +257,7 @@ export default function ScheduleScreen() {
         const fNo = await fetchFamilyNo();
         if (fNo) {
           family_no = fNo;
-          await fetchFamilyGoal();
+          // await fetchFamilyGoal();
           await fetchSchedules();
           await fetchScheduleCheckLogs();
         }
@@ -263,10 +268,12 @@ export default function ScheduleScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
+        {/**
         <View style={styles.goalSection}>
           <Text style={styles.goalLabel}>이달의 목표</Text>
           <Text style={styles.goalText}>{monthGoal}</Text>
         </View>
+         */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>일정</Text>
@@ -350,19 +357,6 @@ export default function ScheduleScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f5f5", padding: 16 },
-  goalSection: {
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3
-  },
-  goalLabel: { fontSize: 18, fontWeight: "bold", marginBottom: 8, textAlign: "center" },
-  goalText: { fontSize: 16, color: "#333", textAlign: "center" },
   section: {
     backgroundColor: "#fff",
     borderRadius: 10,

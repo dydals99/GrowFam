@@ -72,21 +72,7 @@ class Family(Base):
     user_no = Column(Integer, ForeignKey("tb_users.user_no", ondelete="CASCADE"), nullable=False)
     family_regist_at = Column(TIMESTAMP, server_default=func.now())
 
-    # Relationship
-    goals = relationship("FamilyMonthGoals", back_populates="family")
     kids = relationship("KidInfo", back_populates="family")
-
-
-class FamilyMonthGoals(Base):
-    __tablename__ = "tb_famliy_month_golas"
-
-    month_golas_no = Column(Integer, primary_key=True, index=True)
-    family_no = Column(Integer, ForeignKey("tb_family.family_no", ondelete="CASCADE"), nullable=False)
-    month_golas_contents = Column(String(255), nullable=True)
-
-    # Relationship
-    family = relationship("Family", back_populates="goals")
-
 
 class KidInfo(Base):
     __tablename__ = "tb_kid_info"

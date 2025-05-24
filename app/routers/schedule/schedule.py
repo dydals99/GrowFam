@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, date
 from pydantic import BaseModel
 from app.database import get_db 
-from app.models import Schedule, ScheduleCheck, FamilyMonthGoals,ScheduleCheckLog
+from app.models import Schedule, ScheduleCheck,ScheduleCheckLog
 from app.schemas import ScheduleCheckLogResponse
 
 router = APIRouter(
@@ -86,13 +86,6 @@ def create_schedule(schedule_data: ScheduleCreate, db: Session = Depends(get_db)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"일정 등록 실패: {str(e)}")
-
-@router.get("/family-goal/{family_no}", response_model=dict)
-def get_family_goal(family_no: int, db: Session = Depends(get_db)):
-    family_goal = db.query(FamilyMonthGoals).filter(FamilyMonthGoals.family_no == family_no).first()
-    if not family_goal:
-        raise HTTPException(status_code=404, detail="해당 가족의 목표가 존재하지 않습니다.")
-    return {"month_golas_contents": family_goal.month_golas_contents}
 
 
 @router.patch("/check/{schedule_no}", response_model=dict)

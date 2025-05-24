@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import DropDownPicker from 'react-native-dropdown-picker';
@@ -16,25 +16,64 @@ export default function FamilyInfoScreen() {
   const user_password = params.user_password as string;
   const user_phone = params.user_phone as string;
 
-  const [familyGoal, setFamilyGoal] = useState('');
-  const [birthDate, setBirthDate] = useState('');
+  type Kid = {
+    kidName: string;
+    birthDate: string;
+    gender: string;
+    height: string;
+    weight: string;
+  };
+
+  // 이전에 추가된 자녀들
+  const [kids, setKids] = useState<Kid[]>([]);
+  // 현재 입력 중인 자녀
+  const [currentKid, setCurrentKid] = useState<Kid>({
+    kidName: '',
+    birthDate: '',
+    gender: '',
+    height: '',
+    weight: '',
+  });
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
-  const [gender, setGender] = useState('');
-  const [height, setHeight] = useState('');
-  const [weight, setWeight] = useState('');
-  const [kidName, setKidName] = useState('');
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([
     { label: '남자', value: 'M' },
     { label: '여자', value: 'W' },
   ]);
-  const [isTooltipVisible, setTooltipVisible] = useState(false);
 
-  const toggleTooltip = () => setTooltipVisible(!isTooltipVisible);
+  // 현재 입력 중인 자녀 정보 유효성 검사
+  const isCurrentKidValid = (kid: Kid) =>
+    kid.kidName && kid.birthDate && kid.gender && kid.height && kid.weight;
 
+  // 자녀 추가
+  const handleAddKid = () => {
+    if (!isCurrentKidValid(currentKid)) {
+      Alert.alert('Error', '현재 자녀 정보를 모두 입력해주세요.');
+      return;
+    }
+    setKids([...kids, currentKid]);
+    setCurrentKid({ kidName: '', birthDate: '', gender: '', height: '', weight: '' });
+    setOpen(false);
+  };
+
+  // 완료
   const handleComplete = async () => {
-    if (!familyGoal || !kidName || !birthDate || !gender || !height || !weight) {
-      Alert.alert('Error', '모든 필드를 입력해주세요.');
+    // 마지막 입력폼이 비어있지 않으면 추가
+    let allKids = [...kids];
+    if (isCurrentKidValid(currentKid)) {
+      allKids = [...kids, currentKid];
+    } else if (
+      currentKid.kidName ||
+      currentKid.birthDate ||
+      currentKid.gender ||
+      currentKid.height ||
+      currentKid.weight
+    ) {
+      Alert.alert('Error', '현재 입력 중인 자녀 정보를 모두 입력하거나 비워주세요.');
+      return;
+    }
+    if (allKids.length === 0) {
+      Alert.alert('Error', '최소 1명의 자녀 정보를 입력해주세요.');
       return;
     }
 
@@ -48,123 +87,126 @@ export default function FamilyInfoScreen() {
           user_email,
           user_password,
           user_phone,
-          family_goal: familyGoal,
-          kid_name: kidName,
-          kid_birthday: birthDate,
-          kid_gender: gender,
-          kid_height: height,
-          kid_weight: weight,
+          kids: allKids.map(kid => ({
+            kid_name: kid.kidName,
+            kid_birthday: kid.birthDate,
+            kid_gender: kid.gender,
+            kid_height: kid.height,
+            kid_weight: kid.weight,
+          })),
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('회원가입 실패');
-      }
-
+      if (!response.ok) throw new Error('회원가입 실패');
       Alert.alert('Success', '회원가입이 완료되었습니다.');
       router.replace('../users/login');
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.');
     }
   };
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>가족 및 자녀 정보 입력</Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>자녀 정보 입력</Text>
 
-      {/* 이달의 목표 입력 */}
-      <View style={styles.inputWithTooltip}>
-        <TextInput
-          style={[styles.input, styles.inputWithIcon]}
-          placeholder="이달의 목표를 입력하세요."
-          value={familyGoal}
-          onChangeText={setFamilyGoal}
-          placeholderTextColor="#aaa"
-        />
-        <TouchableOpacity style={styles.tooltipIconInside} onPress={toggleTooltip}>
-          <Text style={styles.tooltipIconText}>?</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* 툴팁 텍스트 */}
-      {isTooltipVisible && (
-        <View style={styles.tooltip}>
-          <Text style={styles.tooltipText}>
-            이달의 목표 예시 : 1kg 감량하기, 3kg 증량하기 등 뚜렷하게 바꾸고자 하는 목표!
+      {/* 이전에 추가된 자녀 카드 */}
+      {kids.map((kid, idx) => (
+        <View key={idx} style={styles.kidCard}>
+          <Text style={styles.kidCardText}>
+            이름: {kid.kidName} / 생년월일: {kid.birthDate} / 성별: {kid.gender === 'M' ? '남자' : '여자'} / 키: {kid.height}cm / 몸무게: {kid.weight}kg
           </Text>
         </View>
-      )}
-      <TextInput
-        style={styles.input}
-        placeholder="이름을 입력하세요"
-        value={kidName}
-        onChangeText={setKidName}
-        placeholderTextColor="#aaa"
-      />
-      {/* 생년월일 선택 */}
-      <TouchableOpacity style={styles.input} onPress={() => setDatePickerVisibility(true)}>
-        <Text style={birthDate ? styles.inputText : styles.placeholderText}>
-          {birthDate || '생년월일을 선택하세요.'}
-        </Text>
+      ))}
+
+      {/* 현재 입력 중인 자녀 폼 */}
+      <View style={{ width: '100%' }}>
+        <TextInput
+          style={styles.input}
+          placeholder="이름을 입력하세요"
+          value={currentKid.kidName}
+          onChangeText={v => setCurrentKid({ ...currentKid, kidName: v })}
+          placeholderTextColor="#aaa"
+        />
+        {/* 생년월일 선택 */}
+        <TouchableOpacity style={styles.input} onPress={() => setDatePickerVisibility(true)}>
+          <Text style={currentKid.birthDate ? styles.inputText : styles.placeholderText}>
+            {currentKid.birthDate || '생년월일을 선택하세요.'}
+          </Text>
+        </TouchableOpacity>
+        <DateTimePickerModal
+          isVisible={isDatePickerVisible}
+          mode="date"
+          onConfirm={(date) => {
+            const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1)
+              .toString()
+              .padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+            setCurrentKid({ ...currentKid, birthDate: formattedDate });
+            setDatePickerVisibility(false);
+          }}
+          onCancel={() => setDatePickerVisibility(false)}
+          locale="ko"
+        />
+        {/* 성별 선택 */}
+        <DropDownPicker
+          open={open}
+          value={currentKid.gender || null}
+          items={items}
+          setOpen={setOpen}
+          setValue={(callbackOrValue) => {
+            const value =
+              typeof callbackOrValue === "function"
+                ? callbackOrValue(currentKid.gender)
+                : callbackOrValue;
+            setCurrentKid({ ...currentKid, gender: value });
+          }}
+          setItems={setItems}
+          placeholder="성별을 선택하세요."
+          style={styles.dropdown}
+          dropDownContainerStyle={styles.dropdownContainer}
+          zIndex={1000}
+          zIndexInverse={1000}
+          listMode="SCROLLVIEW"
+        />
+        {/* 키 입력 */}
+        <TextInput
+          style={styles.input}
+          placeholder="키를 입력하세요 (cm)"
+          value={currentKid.height}
+          onChangeText={v => setCurrentKid({ ...currentKid, height: v })}
+          keyboardType="numeric"
+          placeholderTextColor="#aaa"
+        />
+        {/* 몸무게 입력 */}
+        <TextInput
+          style={styles.input}
+          placeholder="몸무게를 입력하세요 (kg)"
+          value={currentKid.weight}
+          onChangeText={v => setCurrentKid({ ...currentKid, weight: v })}
+          keyboardType="numeric"
+          placeholderTextColor="#aaa"
+        />
+      </View>
+
+      {/* 추가하기 버튼 */}
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: isCurrentKidValid(currentKid) ? '#F28B8C' : '#ccc' }]}
+        onPress={handleAddKid}
+        disabled={!isCurrentKidValid(currentKid)}
+      >
+        <Text style={styles.buttonText}>자녀 추가하기</Text>
       </TouchableOpacity>
-      <DateTimePickerModal
-        isVisible={isDatePickerVisible}
-        mode="date"
-        onConfirm={(date) => {
-          const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1)
-            .toString()
-            .padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-          setBirthDate(formattedDate);
-          setDatePickerVisibility(false);
-        }}
-        onCancel={() => setDatePickerVisibility(false)}
-        locale="ko"
-      />
-
-      {/* 성별 선택 */}
-      <DropDownPicker
-        open={open}
-        value={gender}
-        items={items}
-        setOpen={setOpen}
-        setValue={setGender}
-        setItems={setItems}
-        placeholder="성별을 선택하세요."
-        style={styles.dropdown}
-        dropDownContainerStyle={styles.dropdownContainer}
-      />
-
-      {/* 키 입력 */}
-      <TextInput
-        style={styles.input}
-        placeholder="키를 입력하세요 (cm)"
-        value={height}
-        onChangeText={setHeight}
-        keyboardType="numeric"
-        placeholderTextColor="#aaa"
-      />
-
-      {/* 몸무게 입력 */}
-      <TextInput
-        style={styles.input}
-        placeholder="몸무게를 입력하세요 (kg)"
-        value={weight}
-        onChangeText={setWeight}
-        keyboardType="numeric"
-        placeholderTextColor="#aaa"
-      />
-
       {/* 완료 버튼 */}
       <TouchableOpacity style={styles.button} onPress={handleComplete}>
         <Text style={styles.buttonText}>완료</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    justifyContent: 'center',
+    flexGrow: 1,
+    justifyContent: 'flex-start',
     alignItems: 'center',
     padding: 20,
     backgroundColor: '#FFEFF1',
@@ -174,6 +216,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 20,
+    paddingTop:40
+  },
+  kidCard: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  kidCardText: {
+    fontSize: 15,
+    color: '#333',
   },
   input: {
     width: '100%',
@@ -185,40 +241,6 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     backgroundColor: '#fff',
     justifyContent: 'center', 
-  },
-  inputWithTooltip: {
-    width: '100%',
-    position: 'relative',
-  },
-  inputWithIcon: {
-    paddingRight: 40, 
-  },
-  tooltipIconInside: {
-    position: 'absolute',
-    right: 15,
-    top: 10,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  tooltipIconText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  tooltip: {
-    marginTop: 5,
-    backgroundColor: '#000',
-    padding: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  tooltipText: {
-    color: '#fff',
-    fontSize: 14,
   },
   inputText: {
     fontSize: 14,

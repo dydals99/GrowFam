@@ -53,7 +53,7 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={({ route }) => {
         // 숨길 탭 이름 배열에 'measure/camera' 추가
-        const hiddenTabs = ['users/login', 'users/regist', 'measure/camera'];
+        const hiddenTabs = ['users/login', 'users/regist', 'measure/camera','family/familyRegist'];
         return {
           headerShown: false,
           tabBarStyle: hiddenTabs.includes(route.name) ? { display: 'none' } : {},

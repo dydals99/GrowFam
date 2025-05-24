@@ -31,7 +31,7 @@ def encode_b64(img: np.ndarray) -> str:
 
 @router.post("/estimate-child-height")
 async def estimate_child_height(
-    dad_height: float = Form(...),         # 아빠 실제 키 (cm)
+    ref_height: float = Form(...),         # 기준 사람람 실제 키 (cm)
     camera_pitch: float = Form(...),       # pitch 값 (deg)
     image: UploadFile = File(...)          # 이미지 파일
 ):
@@ -64,7 +64,7 @@ async def estimate_child_height(
     # 5) 픽셀 높이 기준 정렬
     heights = [(i, boxes[i, 3] - boxes[i, 1]) for i in idxs]
     heights.sort(key=lambda x: x[1], reverse=True)
-    dad_i, dad_px = heights[0]
+    ref_i, ref_px = heights[0]
     child_i, child_px = heights[1]
 
     # 6) focal length (fy) 계산
@@ -73,24 +73,24 @@ async def estimate_child_height(
     else:
         f_px = img.shape[0] / 2  # 기본 focal length 추정
 
-    # 7) 아빠까지 거리 추정
-    D_dad = (f_px * dad_height) / dad_px
+    # 7) 기준 사람의 거리리까지 거리 추정
+    D_ref = (f_px * ref_height) / ref_px
 
     # 8) 아이 키 계산 (pitch 보정 포함)
-    raw_child_height = (child_px * D_dad) / f_px
+    raw_child_height = (child_px * D_ref) / f_px
     pitch_rad = math.radians(camera_pitch)
     child_height = raw_child_height / math.cos(pitch_rad)
 
     # 9) 결과 이미지 생성
     ann = img.copy()
-    for idx, color in [(dad_i, (0, 0, 255)), (child_i, (255, 0, 0))]:
+    for idx, color in [(ref_i, (0, 0, 255)), (child_i, (255, 0, 0))]:
         x1, y1, x2, y2 = boxes[idx].astype(int)
         cv2.rectangle(ann, (x1, y1), (x2, y2), color, 3)
     b64_ann = encode_b64(ann)
 
     return JSONResponse({
         "success": True,
-        "distance_dad_cm": round(D_dad, 1),
+        "distance_dad_cm": round(D_ref, 1),
         "child_height_cm": round(child_height, 1),
         "annotated_image": b64_ann
     })

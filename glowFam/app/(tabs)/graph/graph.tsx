@@ -164,7 +164,7 @@ const GlowFamScreen: React.FC = () => {
             )}
           </View>
           <View style={styles.familyGoalsContainer}>
-            <Text style={styles.familySectionTitle}>이번 주(월~일)</Text>
+            <Text style={styles.familySectionTitle}>우리 가족 이번 주 달성률</Text>
             <View style={{ flexDirection: "row", alignItems: "center", marginTop: 5 }}>
               <View style={styles.familyProgressBarBackground}>
                 <View
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   
   },
   familySectionTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: "bold",
     marginBottom: 5,
   },
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     width: 270,
     height: 15,
     backgroundColor: '#e0e0e0',
-    borderRadius: 5,
+    borderRadius: 20,
     marginHorizontal: 10,
   },
   familyProgressBarFill: {
