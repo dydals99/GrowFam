@@ -4,6 +4,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { API_URL } from '../../../constants/config';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as ImagePicker from 'expo-image-picker';
+import { containsSwearWord } from '../utils/swearFilter';
+
 
 export default function CommunityEdit() {
   const router = useRouter();
@@ -54,6 +56,11 @@ export default function CommunityEdit() {
     }
     if (!post) {
       Alert.alert('오류', '수정할 게시글 정보를 찾을 수 없습니다.');
+      return;
+    }
+    // 욕설 필터링
+    if (containsSwearWord(title) || containsSwearWord(content)) {
+      Alert.alert('Error', '욕설이 포함된 글은 등록할 수 없습니다.');
       return;
     }
 

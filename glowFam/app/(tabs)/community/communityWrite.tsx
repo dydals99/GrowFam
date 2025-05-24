@@ -5,6 +5,7 @@ import { API_URL } from '../../../constants/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as ImagePicker from 'expo-image-picker';
+import { containsSwearWord } from '../utils/swearFilter';
 
 export default function CommunityWrite() {
   const router = useRouter();
@@ -54,6 +55,11 @@ export default function CommunityWrite() {
     }
     if (!userNo) {
       Alert.alert('Error', '로그인이 필요합니다.');
+      return;
+    }
+    // 욕설 필터링
+    if (containsSwearWord(title) || containsSwearWord(content)) {
+      Alert.alert('Error', '욕설이 포함된 글은 등록할 수 없습니다.');
       return;
     }
 

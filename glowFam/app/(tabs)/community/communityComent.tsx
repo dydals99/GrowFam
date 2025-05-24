@@ -4,6 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { API_URL } from '../../../constants/config';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as ImagePicker from 'expo-image-picker';
+import { containsSwearWord } from '../utils/swearFilter'; // 경로는 실제 위치에 맞게 수정
 
 const CommunityComent = () => {
   const router = useRouter();
@@ -59,7 +60,11 @@ const CommunityComent = () => {
       Alert.alert('오류', '댓글 내용을 입력하세요.');
       return;
     }
-
+    if (containsSwearWord(newComent)) {
+      Alert.alert('오류', '욕설이 포함된 댓글은 등록할 수 없습니다.');
+      return;
+    }
+    
     const formData = new FormData();
     formData.append('coment_content', newComent);
     formData.append('community_no', communityNo);
