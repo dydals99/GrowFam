@@ -26,9 +26,10 @@ export default function LoginScreen() {
   }, []);
 
   const handleLogin = async () => {
-  if (!email || !password) {
-    Alert.alert('Error', '아이디 혹은 비밀번호가 틀렸습니다.');
-    return;
+    
+    if (!email || !password) {
+      Alert.alert('Error', '아이디 혹은 비밀번호가 틀렸습니다.');
+      return;
   }
 
     try {
@@ -184,7 +185,7 @@ const styles = StyleSheet.create({
   button: {
     width: '100%',
     height: 50,
-    backgroundColor: '#28a745',
+    backgroundColor: '#b7d6bb',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 25,

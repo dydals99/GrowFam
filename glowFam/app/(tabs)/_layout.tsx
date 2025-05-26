@@ -56,12 +56,12 @@ export default function TabsLayout() {
         const hiddenTabs = ['users/login', 'users/regist', 'measure/camera','family/familyRegist'];
         return {
           headerShown: false,
-          tabBarStyle: hiddenTabs.includes(route.name) ? { display: 'none' } : {},
+          //tabBarStyle: hiddenTabs.includes(route.name) ? { display: 'none' } : {},
         };
       }}
       tabBar={(props) => {
         const routeName = props.state?.routes[props.state.index]?.name ?? '';
-        const hiddenTabs = ['users/login', 'users/regist', 'measure/camera'];
+        const hiddenTabs = ['users/login', 'users/regist', 'measure/camera','family/familyRegist'];
         return hiddenTabs.includes(routeName) ? null : <BottomNav {...props} />;
       }}
     >

@@ -97,7 +97,7 @@ const OnCamera: React.FC = () => {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
       if (!photo?.uri) throw new Error('촬영 실패');
       const formData = new FormData();
-      formData.append('dad_height', dadHeight);
+      formData.append('ref_height', dadHeight);
       formData.append('camera_pitch', pitch?.toFixed(2) || '0'); 
       formData.append('image', {
         uri: photo.uri,
@@ -219,13 +219,7 @@ const OnCamera: React.FC = () => {
                 </Text>
               </View>
             </View>
-            {/* 발끝선 */}
-            {/*
-            <View style={styles.footLineWrap}>
-              <View style={styles.footLine} />
-              <Text style={styles.footLineText}>발끝선</Text>
-            </View>
-            */}
+           
             {/* TIP ? 버튼 */}
             <TouchableOpacity
               style={styles.tipCircle}

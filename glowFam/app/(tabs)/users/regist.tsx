@@ -14,8 +14,14 @@ export default function RegisterScreen() {
   const [isNicknameValid, setIsNicknameValid] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [isPhoneValid, setIsPhoneValid] = useState(false);
+  const [isPasswordValid, setIsPasswordValid] = useState<boolean | null>(null);
 
   const router = useRouter();
+
+  const validatePassword = (password: string) => {
+    const regex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,15}$/;
+    return regex.test(password);
+  };
 
   const handleRegister = async () => {
     if (!isNicknameValid) {
@@ -30,6 +36,14 @@ export default function RegisterScreen() {
       Alert.alert('Error', '이메일 인증이 필요합니다.');
       return;
     }
+    if (!userPassword) {
+    Alert.alert('Error', '비밀번호를 입력하세요.');
+    return;
+    }
+    if (!isPasswordValid) {
+      Alert.alert('Error', '비밀번호는 특수문자, 영문, 숫자 조합 8~15자리여야 합니다.');
+      return;
+    }
     // familyRegist로 회원가입 정보 전달
     router.replace({
       pathname: '/family/familyRegist',
@@ -42,7 +56,10 @@ export default function RegisterScreen() {
       }
     });
   };
-
+  const handlePasswordChange = (password: string) => {
+    setUserPassword(password);
+    setIsPasswordValid(password === "" ? null : validatePassword(password));
+  };
   const checkPhone = async () => {
     if (!userPhone) {
       Alert.alert('전화번호를 입력하세요.');
@@ -258,15 +275,31 @@ export default function RegisterScreen() {
       </View>
 
       <View style={styles.inputWithButton}>
-        <TextInput
-          style={[styles.input, styles.inputFlex]}
-          placeholder="비밀번호"
-          value={userPassword}
-          onChangeText={setUserPassword}
-          secureTextEntry
-          placeholderTextColor="#aaa"
+      <TextInput
+        style={[
+          styles.input,
+          styles.inputFlex,
+          isPasswordValid === false && styles.invalidInput,
+          isPasswordValid === true && styles.validInput,
+        ]}
+        placeholder="비밀번호"
+        value={userPassword}
+        onChangeText={handlePasswordChange}
+        secureTextEntry
+        placeholderTextColor="#aaa"
+      />
+      {isPasswordValid !== null && (
+        <Ionicons
+          name={isPasswordValid ? 'checkmark-circle' : 'close-circle'}
+          size={20}
+          color={isPasswordValid ? 'green' : 'red'}
+          style={{ marginLeft: 8 }}
         />
-      </View>
+      )}
+    </View>
+    <Text style={{ color: '#ccc', fontSize: 12, alignSelf: 'flex-start', marginLeft: 20, marginBottom: 10 }}>
+      * 특수문자, 영문, 숫자 조합 8~15자리
+    </Text>
 
       <TouchableOpacity style={styles.button} onPress={handleRegister}>
         <Text style={styles.buttonText}>가입하기</Text>
@@ -352,5 +385,11 @@ const styles = StyleSheet.create({
     left: 20,
     zIndex: 10,
     padding: 8,
-},
+  },
+  invalidInput: {
+  borderColor: 'red',
+  },
+  validInput: {
+    borderColor: 'green',
+  },
 });
