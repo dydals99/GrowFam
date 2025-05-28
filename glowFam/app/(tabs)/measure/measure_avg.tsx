@@ -3,6 +3,18 @@ import { View, Text, StyleSheet, Dimensions, ScrollView } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { BarChart } from "react-native-chart-kit";
 
+const Legend = () => (
+  <View style={styles.legendContainer}>
+    <View style={styles.legendItem}>
+      <View style={[styles.legendBar, { backgroundColor: '#B7D6BB' }]} />
+      <Text style={styles.legendLabel}>우리아이</Text>
+    </View>
+    <View style={styles.legendItem}>
+      <View style={[styles.legendBar, { backgroundColor: '#EDEDEC' }]} />
+      <Text style={styles.legendLabel}>평균아이</Text>
+    </View>
+  </View>
+);
 const MeasureAvg = () => {
   const { comparisonData } = useLocalSearchParams();
 
@@ -14,21 +26,22 @@ const MeasureAvg = () => {
     datasets: [
       {
         data: [
-          parsedComparisonData.averageHeight, 
           parsedComparisonData.height, 
-          parsedComparisonData.averageWeight, 
+          parsedComparisonData.averageHeight, 
           parsedComparisonData.weight, 
-          parsedComparisonData.averageBMI, 
+          parsedComparisonData.averageWeight, 
           parsedComparisonData.bmi,
+          parsedComparisonData.averageBMI, 
         ],
         colors: [
           // 막대별 색상 설정
-          (opacity = 1) => `rgba(0, 123, 255, ${opacity})`, 
-          (opacity = 1) => `rgba(200, 200, 255, ${opacity})`, 
-          (opacity = 1) => `rgba(0, 123, 255, ${opacity})`,
-          (opacity = 1) => `rgba(200, 200, 255, ${opacity})`,
-          (opacity = 1) => `rgba(0, 123, 255, ${opacity})`,
-          (opacity = 1) => `rgba(200, 200, 255, ${opacity})`,
+          // 막대별 색상 설정
+          (opacity = 1) => `rgba(183, 214, 187, ${opacity})`, 
+          (opacity = 1) => `rgba(237, 237, 236, ${opacity})`,
+          (opacity = 1) => `rgba(183, 214, 187, ${opacity})`, 
+          (opacity = 1) => `rgba(237, 237, 236, ${opacity})`, 
+          (opacity = 1) => `rgba(183, 214, 187, ${opacity})`, 
+          (opacity = 1) => `rgba(237, 237, 236, ${opacity})`,
         ],
       },
     ],
@@ -48,16 +61,17 @@ const MeasureAvg = () => {
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>
-      우리 아이는{"\n"}
+      우리 아이의 키는{" "}
         <Text style={styles.highlight}>
-          상위 {(100 - Number(parsedComparisonData.heightPercentile || 0)).toFixed(1)}% 키{"\n"}
+          상위 {(100 - Number(parsedComparisonData.heightPercentile || 0)).toFixed(1)}%{"\n"}
         </Text>
+          몸무게{" "} 
         <Text style={styles.highlight}>
-          상위 {(100 - Number(parsedComparisonData.weightPercentile)).toFixed(1)}% 몸무게{"\n"}
+          상위{(100 - Number(parsedComparisonData.weightPercentile)).toFixed(1)}%{" "} 
         </Text>
-        <Text style={styles.highlight}>
+        {/* <Text style={styles.highlight}>
           상위 {(100 - Number(parsedComparisonData.bmiPercentile)).toFixed(1)}% BMI
-        </Text>
+        </Text> */}
           를 기록했어요!
       </Text>
       
@@ -102,40 +116,45 @@ const MeasureAvg = () => {
           평균보다 키는{" "}
           <Text style={styles.highlight}>
             {Math.abs(parsedComparisonData.heightDifference)}cm{" "}
-            {parsedComparisonData.heightDifference > 0 ? "더 큽니다." : "더 작습니다."}
           </Text>
+          {parsedComparisonData.heightDifference > 0 ? "더 큽니다." : "더 작습니다."}
         </Text>
         <Text style={styles.resultText}>
           몸무게는 평균보다{" "}
           <Text style={styles.highlight}>
             {Math.abs(parsedComparisonData.weightDifference)}kg{" "}
-            {parsedComparisonData.weightDifference > 0 ? "더 많습니다." : "더 적습니다."}
           </Text>
+          {parsedComparisonData.weightDifference > 0 ? "더 많습니다." : "더 적습니다."}
         </Text>
         <Text style={styles.resultText}>
           BMI는 평균보다{" "}
           <Text style={styles.highlight}>
-            {Math.abs(parsedComparisonData.bmiDifference).toFixed(1)}{" "}
-            {parsedComparisonData.bmiDifference > 0 ? "더 높습니다." : "더 낮습니다."}
-          </Text>
+            {Math.abs(parsedComparisonData.bmiDifference).toFixed(1)}{" "} 
+          </Text>만큼{" "} 
+          {parsedComparisonData.bmiDifference > 0 ? "더 높습니다." : "더 낮습니다."}
         </Text>
       </View>
 
       {/* 수직 막대 그래프 */}
-      <BarChart
-        data={chartData}
-        width={screenWidth} 
-        height={450} 
-        yAxisLabel=""
-        yAxisSuffix=""
-        yAxisInterval={5} 
-        fromZero={true}
-        chartConfig={chartConfig}
-        verticalLabelRotation={0} 
-        style={styles.chart}
-        withCustomBarColorFromData={true}
-        flatColor={true} 
-      />
+      <View style={{ marginTop: 20 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+          <Legend />
+        </View>
+        <BarChart
+          data={chartData}
+          width={screenWidth}
+          height={450}
+          yAxisLabel=""
+          yAxisSuffix=""
+          yAxisInterval={5}
+          fromZero={true}
+          chartConfig={chartConfig}
+          verticalLabelRotation={0}
+          style={styles.chart}
+          withCustomBarColorFromData={true}
+          flatColor={true}
+        />
+      </View>
     </ScrollView>
   );
 };
@@ -152,7 +171,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     textAlign: "center",
-    color: "#007bff", 
+    color: "#333", 
     marginBottom: 20,
     marginTop:50
   },
@@ -188,7 +207,7 @@ const styles = StyleSheet.create({
     paddingTop: 10
   },
   resultContainer: {
-    backgroundColor: "#e9f7ff",
+    backgroundColor: "#F6F6F3",
     padding: 15,
     borderRadius: 10,
     marginBottom: 20,
@@ -200,10 +219,31 @@ const styles = StyleSheet.create({
   },
   highlight: {
     fontWeight: "bold",
-    color: "#007bff",
+    color: "#B7D6BB",
   },
   chart: {
     marginTop: 20,
     borderRadius: 16,
+  },
+  legendContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    marginRight: 10,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  legendBar: {
+    width: 18,
+    height: 8,
+    borderRadius: 2,
+    marginRight: 4,
+  },
+  legendLabel: {
+    fontSize: 12,
+    color: '#333',
   },
 });
