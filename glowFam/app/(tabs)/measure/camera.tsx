@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Image, Alert, Keyboard, TouchableWithoutFeedback, Button} from 'react-native';
 import { Camera, CameraType, useCameraPermissions,CameraView } from 'expo-camera';
 import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { API_URL } from '../../../constants/config';
 import { DeviceMotion } from 'expo-sensors';
@@ -11,30 +12,29 @@ import { useLocalSearchParams } from "expo-router";
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
 import { useRouter } from "expo-router";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Step = 'askHeight' | 'result';
+const TIP_HIDE_KEY = 'hide_camera_tip';
 
 const OnCamera: React.FC = () => {
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
   const cameraRef = useRef<CameraView | null>(null);
   const navigation = useNavigation();
-  const router = useRouter();
-
-  // 키 측정 상태
   const [step, setStep] = useState<Step>('askHeight');
   const [dadHeight, setDadHeight] = useState('');
   const [childHeight, setChildHeight] = useState<number | null>(null);
   const [annotUri, setAnnotUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [pitch, setPitch] = useState<number | null>(null);
-  const [tipVisible, setTipVisible] = useState(false);
-
-  // 타이머 상태
   const [timerOn, setTimerOn] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const params = useLocalSearchParams();
   const kidInfoNo = params.kid_info_no; 
+  const [tipVisible, setTipVisible] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [isFocused, setIsFocused] = useState(true);
 
   useEffect(() => {
     (async () => {
@@ -57,7 +57,25 @@ const OnCamera: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      const hideTip = await AsyncStorage.getItem(TIP_HIDE_KEY);
+      if (hideTip !== 'true') {
+        setTipVisible(true); 
+      }
+    })();
+  }, []);
+  
+  useFocusEffect(
+    React.useCallback(() => {
+      setIsFocused(true);
+      return () => {
+        setIsFocused(false);
+      };
+    }, [])
+  );
   if (!permission) return <View />;
+
   if (!permission.granted) {
     return (
       <View style={styles.container}>
@@ -180,11 +198,13 @@ const OnCamera: React.FC = () => {
       <View style={styles.container}>
         {step !== 'result' && (
           <>
-            <CameraView
-              style={styles.camera}
-              facing={facing}
-              ref={cameraRef}
-            />
+            {isFocused && (
+              <CameraView
+                style={styles.camera}
+                facing={facing}
+                ref={cameraRef}
+              />
+            )}
             {/* 각도 표시 및 수평선 */}
             <View style={styles.pitchOverlay}>
               <View style={styles.pitchLineWrap}>
@@ -227,17 +247,55 @@ const OnCamera: React.FC = () => {
               activeOpacity={0.7}
             >
               <Text style={styles.tipCircleText}>?</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> 
             {/* TIP 내용 박스 (토글) */}
             {tipVisible && (
               <View style={styles.tipBox}>
-                <Text style={styles.tipTitle}>TIP</Text>
+                <Text style={styles.tipTitle}>정확한 측정을 위한 TIP{"\n"}</Text>
                 <Text style={styles.tipText}>
-                  카메라를 최대한 수평(0°)에 가깝게 유지하세요.{"\n"}
+                  카메라 각도를 최대한 0°에 가깝게 유지하세요.{"\n"}{"\n"}
                   <Text style={{ color: '#4caf50' }}>0~2°: 초록(정상)</Text>{"\n"}
                   <Text style={{ color: '#ffb300' }}>3~5°: 노랑(주의)</Text>{"\n"}
                   <Text style={{ color: '#f44336' }}>5° 초과: 빨강(재측정 필요)</Text>
+                  {"\n\n"}
+                  <Text style={{ color: '#1976d2', fontWeight: 'bold' }}>
+                    1. 가슴과 배 사이 위치에 핸드폰을 {"\n"}수직으로 세워 놓습니다.
+                    {"\n\n"}
+                    2. 측정자와 기준사람은 고개를 들거나 {"\n"} 내리지 말고,
+                    정면을 바라봅니다. 
+                    {"\n\n"}
+                    3. 머리부터 발 끝까지 나오도록 촬영합니다.{"\n"}  
+                  </Text>
+                  
                 </Text>
+                <Image
+                    source={require('../../../assets/images/cameraEX.jpeg')}
+                    style={{ width: 160, height: 220, alignSelf: 'center', marginTop: 10, borderRadius: 8 }}
+                  />
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, alignSelf: 'center' }}
+                    onPress={() => setDontShowAgain(v => !v)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={dontShowAgain ? 'checkbox' : 'square-outline'}
+                      size={20}
+                      color="#1976d2"
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text style={{ color: '#1976d2', fontSize: 14 }}>다음에 뜨지 않기</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{ marginTop: 10, alignSelf: 'center', backgroundColor: '#1976d2', borderRadius: 6, paddingHorizontal: 18, paddingVertical: 6 }}
+                    onPress={async () => {
+                      if (dontShowAgain) {
+                        await AsyncStorage.setItem(TIP_HIDE_KEY, 'true');
+                      }
+                      setTipVisible(false);
+                    }}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>확인</Text>
+                  </TouchableOpacity>
               </View>
             )}
             {/* 뒤로가기 */}
@@ -562,12 +620,12 @@ const styles = StyleSheet.create({
   },
   tipBox: {
     position: 'absolute',
-    top: 92, // tipCircle 아래에 위치
-    right: 16,
+    top: 100, // tipCircle 아래에 위치
+    right: 21,
     backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: 10,
     padding: 10,
-    minWidth: 160,
+    minWidth: 330,
     zIndex: 40,
     shadowColor: '#000',
     shadowOpacity: 0.08,
@@ -578,12 +636,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#222',
     marginBottom: 2,
-    fontSize: 14,
+    fontSize: 18,
+    textAlign: 'center'
   },
   tipText: {
     fontSize: 12,
     color: '#444',
     lineHeight: 18,
+    textAlign: 'center'
   },
    tipCircle: {
     position: 'absolute',
