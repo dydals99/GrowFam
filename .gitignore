@@ -15,3 +15,4 @@ yolov8s
 
 app/routers/measure/height_weight_data.xlsx
 glowFam/app/(tabs)/utils/swearFilter.ts
+requirements.txt
